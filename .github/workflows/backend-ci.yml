@@ -1,0 +1,49 @@
+name: Backend CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  backend-tests:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          # Enable pip caching and key it from backend dependencies for faster reruns.
+          cache: 'pip'
+          cache-dependency-path: backend/requirements.txt
+
+      - name: Install backend dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r backend/requirements.txt
+
+      - name: Ensure pytest is installed
+        run: |
+          # Install pytest only when it is not declared in backend requirements.
+          python - <<'PY'
+          from pathlib import Path
+
+          requirements_path = Path("backend/requirements.txt")
+          lines = [line.strip().lower() for line in requirements_path.read_text(encoding="utf-8").splitlines()]
+          has_pytest = any(line and not line.startswith("#") and line.startswith("pytest") for line in lines)
+          if has_pytest:
+            print("pytest already declared in backend/requirements.txt")
+          else:
+            print("pytest not found in backend/requirements.txt; installing...")
+            raise SystemExit(1)
+          PY
+          if [ $? -ne 0 ]; then pip install pytest; fi
+
+      - name: Run backend test suite
+        # Run backend tests as the CI quality gate from the repository root.
+        run: pytest backend/tests/
