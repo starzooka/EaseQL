@@ -25,7 +25,7 @@ python -m tests.test_execute_sql
 python -m tests.test_end_to_end
 ```
 
-`test_end_to_end` uses the live Ollama server and `qwen2.5-coder:latest`, uploads `tests/sample_sales.csv`, generates SQL for a regional sales question, executes it, and checks the expected totals.
+`test_end_to_end` mocks the Ollama request, uploads `tests/sample_sales.csv`, exercises `/api/query`, and checks that DuckDB executes the returned SQL successfully.
 
 ## Upload a data file
 

@@ -1,4 +1,5 @@
 import asyncio
+from unittest.mock import patch
 
 import app.main as main
 
@@ -29,9 +30,7 @@ class FakeClient:
         return FakeResponse()
 
 
-original_client = main.httpx.AsyncClient
-main.httpx.AsyncClient = FakeClient
-try:
+with patch("app.main.httpx.AsyncClient", FakeClient):
     result = asyncio.run(
         main.generate_sql(
             main.SQLRequest(
@@ -40,8 +39,6 @@ try:
             )
         )
     )
-finally:
-    main.httpx.AsyncClient = original_client
 
 assert result["sql"] == "SELECT COUNT(*) FROM uploaded_data;"
 print("Ollama SQL endpoint checks passed")

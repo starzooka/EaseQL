@@ -1,6 +1,7 @@
 import asyncio
 import re
 from pathlib import Path
+from unittest.mock import patch
 
 import duckdb
 import pytest
@@ -69,7 +70,7 @@ class FakeAsyncClient:
 
 
 @pytest.fixture(autouse=True)
-def employment_database_and_llm(monkeypatch: pytest.MonkeyPatch, tmp_path: Path):
+def employment_database_and_llm(tmp_path: Path):
     original_database_path = main.DATABASE_PATH
     database_path = tmp_path / "employment.duckdb"
     main.DATABASE_PATH = database_path
@@ -84,8 +85,8 @@ def employment_database_and_llm(monkeypatch: pytest.MonkeyPatch, tmp_path: Path)
             """
         )
 
-    monkeypatch.setattr(main.httpx, "AsyncClient", FakeAsyncClient)
-    yield
+    with patch("app.main.httpx.AsyncClient", FakeAsyncClient):
+        yield
     main.DATABASE_PATH = original_database_path
 
 

@@ -1,9 +1,22 @@
 import json
 from pathlib import Path
+from unittest.mock import patch
 
 from fastapi.testclient import TestClient
 
 import app.main as main
+
+
+class FakeOllamaResponse:
+    def raise_for_status(self):
+        return None
+
+    def json(self):
+        return {"choices": [{"message": {"content": "SELECT * FROM uploaded_data LIMIT 5"}}]}
+
+
+async def fake_ollama_post(self, url, json):
+    return FakeOllamaResponse()
 
 
 main.OLLAMA_MODEL = "qwen2.5-coder:latest"
@@ -22,23 +35,20 @@ assert upload["row_count"] == 8
 assert '"region" VARCHAR' in upload["schema_text"]
 assert '"sales" BIGINT' in upload["schema_text"]
 
-sql_response = client.post(
-    "/generate-sql",
-    json={
-        "schema_text": upload["schema_text"],
-        "question": "what are total sales by region?",
-    },
-)
-assert sql_response.status_code == 200, sql_response.text
-sql = sql_response.json()["sql"]
-print(f"Generated SQL: {sql}")
+with patch("app.main.httpx.AsyncClient.post", new=fake_ollama_post):
+    query_response = client.post(
+        "/api/query",
+        json={
+            "table_name": "uploaded_data",
+            "natural_language_query": "show the first five sales rows",
+        },
+    )
 
-query_response = client.post("/execute-sql", json={"sql": sql})
 assert query_response.status_code == 200, query_response.text
 result = query_response.json()
 print(json.dumps(result, indent=2, default=str))
 
-actual = {row["region"]: row["total_sales"] for row in result["rows"]}
-expected = {"North": 150, "South": 325, "East": 300, "West": 350}
-assert actual == expected, f"Expected {expected}, got {actual}"
-print("End-to-end ingestion -> schema -> SQL -> execution -> output check passed")
+assert result["sql"] == "SELECT * FROM uploaded_data LIMIT 5"
+assert len(result["results"]) == 5
+assert result["results"][0]["region"] == "North"
+print("End-to-end ingestion -> mocked SQL generation -> execution -> output check passed")
