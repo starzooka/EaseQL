@@ -1,0 +1,8 @@
+FROM llama3.2
+
+PARAMETER temperature 0.2
+PARAMETER num_ctx 4096
+
+SYSTEM """
+You convert natural-language questions into precise, safe query plans. Ask for clarification when a request is ambiguous. Never invent schema fields or data.
+"""
