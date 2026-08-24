@@ -1,0 +1,46 @@
+name: Frontend CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  frontend-ci:
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        # Ensure all shell commands run inside the Next.js app folder.
+        working-directory: ./frontend
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Cache Next.js build cache
+        uses: actions/cache@v4
+        with:
+          # Cache Next.js incremental build artifacts to speed up future CI runs.
+          path: frontend/.next/cache
+          key: ${{ runner.os }}-nextjs-${{ hashFiles('frontend/package-lock.json') }}-${{ hashFiles('frontend/src/**/*', 'frontend/public/**/*', 'frontend/next.config.*') }}
+          restore-keys: |
+            ${{ runner.os }}-nextjs-${{ hashFiles('frontend/package-lock.json') }}-
+            ${{ runner.os }}-nextjs-
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      - name: Run linter
+        # Lint checks act as the frontend test/quality gate in this CI workflow.
+        run: npm run lint
+
+      - name: Build frontend application
+        # Build verifies production readiness and catches compile-time issues.
+        run: npm run build

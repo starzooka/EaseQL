@@ -1,69 +1,138 @@
-import Image from "next/image";
-import styles from "./page.module.css";
+"use client";
+
+import { ChangeEvent, DragEvent, FormEvent, useState } from "react";
+import FileUpload from "../components/FileUpload";
+import Footer from "../components/Footer";
+import Header from "../components/Header";
+import QueryForm from "../components/QueryForm";
+import ResultsDisplay, { type QueryResponse } from "../components/ResultsDisplay";
+
+type UploadResponse = {
+  table: string;
+  row_count: number;
+};
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+
+function displayValue(value: unknown) {
+  if (value === null || value === undefined) return "null";
+  if (typeof value === "object") return JSON.stringify(value);
+  return String(value);
+}
 
 export default function Home() {
+  const [file, setFile] = useState<File | null>(null);
+  const [tableName, setTableName] = useState("");
+  const [question, setQuestion] = useState("");
+  const [uploading, setUploading] = useState(false);
+  const [querying, setQuerying] = useState(false);
+  const [query, setQuery] = useState<QueryResponse | null>(null);
+  const [error, setError] = useState("");
+  const [isDragging, setIsDragging] = useState(false);
+
+  const uploadFile = async (selectedFile: File) => {
+    if (!selectedFile.name.toLowerCase().endsWith(".csv")) {
+      setError("Please choose a CSV file.");
+      return;
+    }
+
+    setFile(selectedFile);
+    setError("");
+    setQuery(null);
+    setUploading(true);
+    const formData = new FormData();
+    formData.append("file", selectedFile);
+
+    try {
+      const response = await fetch(`${API_URL}/api/upload`, {
+        method: "POST",
+        body: formData,
+      });
+      const data = (await response.json()) as UploadResponse & { detail?: string };
+      if (!response.ok) throw new Error(data.detail ?? "Upload failed.");
+      setTableName(data.table);
+    } catch (uploadError) {
+      setError(uploadError instanceof Error ? uploadError.message : "Upload failed.");
+      setFile(null);
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
+    const selectedFile = event.target.files?.[0];
+    if (selectedFile) void uploadFile(selectedFile);
+  };
+
+  const handleDragOver = (event: DragEvent<HTMLLabelElement>) => {
+    event.preventDefault();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = () => {
+    setIsDragging(false);
+  };
+
+  const handleDrop = (event: DragEvent<HTMLLabelElement>) => {
+    event.preventDefault();
+    setIsDragging(false);
+    const droppedFile = event.dataTransfer.files[0];
+    if (droppedFile) void uploadFile(droppedFile);
+  };
+
+  const submitQuestion = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!tableName || !question.trim()) return;
+    setError("");
+    setQuerying(true);
+
+    try {
+      const response = await fetch(`${API_URL}/api/query`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ table_name: tableName, natural_language_query: question.trim() }),
+      });
+      const data = (await response.json()) as QueryResponse & { detail?: string };
+      if (!response.ok) throw new Error(data.detail ?? "Could not answer that question.");
+      setQuery(data);
+    } catch (queryError) {
+      setError(queryError instanceof Error ? queryError.message : "Could not answer that question.");
+    } finally {
+      setQuerying(false);
+    }
+  };
+
+  const columns = query?.results.length ? Object.keys(query.results[0]) : [];
+
   return (
-    <div className={styles.page}>
-      <main className={styles.main}>
-        <Image
-          className={styles.logo}
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className={styles.intro}>
-          <h1>
-            To get started, edit the{" "}
-            <code className={styles.code}>page.tsx</code> file.
-          </h1>
-          <p>
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className={styles.ctas}>
-          <a
-            className={styles.primary}
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className={styles.logo}
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={14}
-            />
-            Deploy Now
-          </a>
-          <a
-            className={styles.secondary}
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
-    </div>
+    <main className="min-h-screen bg-[#0a0a0a] font-sans text-slate-300 antialiased selection:bg-blue-500/30 selection:text-blue-200">
+      <div className="mx-auto flex max-w-7xl flex-col gap-10 px-4 py-10 pb-20 sm:gap-12 sm:px-8 lg:px-10 lg:py-16">
+        <Header />
+
+        <section className="grid items-stretch gap-6 lg:grid-cols-[1fr_1.2fr]">
+          <FileUpload
+            file={file}
+            tableName={tableName}
+            uploading={uploading}
+            isDragging={isDragging}
+            onFileChange={handleFileChange}
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            onDrop={handleDrop}
+          />
+
+          <QueryForm
+            tableName={tableName}
+            question={question}
+            setQuestion={setQuestion}
+            querying={querying}
+            submitQuestion={submitQuestion}
+          />
+        </section>
+
+        <ResultsDisplay query={query} error={error} columns={columns} displayValue={displayValue} />
+        <Footer />
+      </div>
+    </main>
   );
 }

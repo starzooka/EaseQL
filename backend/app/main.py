@@ -22,8 +22,9 @@ app.add_middleware(
 )
 
 OLLAMA_CHAT_URL = os.getenv("OLLAMA_CHAT_URL", "http://localhost:11434/v1/chat/completions")
-OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "query-nlp")
+OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "qwen2.5-coder:latest")
 DATABASE_PATH = Path(os.getenv("DUCKDB_PATH", Path(__file__).resolve().parents[1] / "data" / "query.duckdb"))
+TEXT_TO_SQL_PROMPT_PATH = Path(__file__).resolve().parents[2] / "local-llm" / "prompts" / "text-to-sql.txt"
 QUERY_TIMEOUT = os.getenv("DUCKDB_QUERY_TIMEOUT", "5s")
 MAX_QUERY_ROWS = 500
 SQL_SYSTEM_PROMPT = """You generate safe, valid SQL for DuckDB.
@@ -41,6 +42,11 @@ class SQLRequest(BaseModel):
 
 class QueryRequest(BaseModel):
     sql: str = Field(min_length=1)
+
+
+class APIQueryRequest(BaseModel):
+    table_name: str = Field(min_length=1)
+    natural_language_query: str = Field(min_length=1)
 
 
 @app.get("/")
@@ -66,6 +72,16 @@ def _clean_sql_response(raw_text: str) -> str:
     if not text:
         raise ValueError("Ollama returned an empty SQL response")
     return text
+
+
+def _format_text_to_sql_prompt(schema_context: str, question: str) -> str:
+    prompt_template = TEXT_TO_SQL_PROMPT_PATH.read_text(encoding="utf-8")
+    return (
+        prompt_template
+        .replace("{{schema_text}}", schema_context)
+        .replace("{{sample_data}}", "")
+        .replace("{{question}}", question)
+    )
 
 
 def _execute_read_only_query(sql: str) -> dict:
@@ -135,6 +151,59 @@ async def generate_sql(request: SQLRequest) -> dict[str, str]:
     return {"sql": sql, "model": OLLAMA_MODEL}
 
 
+@app.post("/api/query")
+async def api_query(request: APIQueryRequest) -> dict:
+    try:
+        schema_context = get_schema_context(request.table_name)
+        base_user_prompt = _format_text_to_sql_prompt(schema_context, request.natural_language_query)
+    except (ValueError, OSError, duckdb.Error) as error:
+        raise HTTPException(status_code=400, detail=f"Could not prepare query context: {error}") from error
+
+    last_error = ""
+    generated_sql = ""
+
+    for attempt in range(1, 4):
+        prompt = base_user_prompt
+        if attempt > 1 and last_error:
+            prompt = (
+                f"{base_user_prompt}\n\n"
+                f"The previous query failed with error: {last_error}. Please provide a corrected SQL query."
+            )
+
+        payload = {
+            "model": OLLAMA_MODEL,
+            "temperature": 0,
+            "messages": [
+                {"role": "system", "content": SQL_SYSTEM_PROMPT},
+                {"role": "user", "content": prompt},
+            ],
+        }
+
+        try:
+            async with httpx.AsyncClient(timeout=60) as client:
+                response = await client.post(OLLAMA_CHAT_URL, json=payload)
+                response.raise_for_status()
+                raw_text = response.json()["choices"][0]["message"]["content"]
+            generated_sql = _clean_sql_response(raw_text)
+        except (httpx.HTTPError, KeyError, IndexError, TypeError, ValueError) as error:
+            if attempt == 3:
+                raise HTTPException(status_code=502, detail=f"Could not generate SQL from Ollama: {error}") from error
+            continue
+
+        try:
+            execution_result = _execute_read_only_query(generated_sql)
+            return {
+                "sql": generated_sql,
+                "results": execution_result["rows"],
+            }
+        except (duckdb.Error, ValueError) as error:
+            last_error = str(error)
+            if attempt == 3:
+                raise HTTPException(status_code=400, detail=last_error) from error
+
+    raise HTTPException(status_code=400, detail=last_error or "Query execution failed after 3 attempts")
+
+
 def _sql_path(path: Path) -> str:
     return str(path).replace("'", "''")
 
@@ -151,7 +220,11 @@ def _is_date(value: str) -> bool:
     return bool(re.fullmatch(r"\d{4}[-/]\d{1,2}[-/]\d{1,2}(?:[ T].*)?", value))
 
 
-def _sanity_check(connection: duckdb.DuckDBPyConnection, columns: list[dict[str, str]]) -> list[dict[str, str]]:
+def _sanity_check(
+    connection: duckdb.DuckDBPyConnection,
+    table_name: str,
+    columns: list[dict[str, str]],
+) -> list[dict[str, str]]:
     warnings = []
     for column in columns:
         if column["type"] not in {"VARCHAR", "STRING"}:
@@ -160,7 +233,8 @@ def _sanity_check(connection: duckdb.DuckDBPyConnection, columns: list[dict[str,
         name = column["name"]
         quoted_name = '"' + name.replace('"', '""') + '"'
         values = connection.sql(
-            f"SELECT {quoted_name} FROM uploaded_data WHERE {quoted_name} IS NOT NULL LIMIT 100"
+            f"SELECT {quoted_name} FROM {_quoted_identifier(table_name)} "
+            f"WHERE {quoted_name} IS NOT NULL LIMIT 100"
         ).fetchall()
         text_values = [str(value[0]).strip() for value in values if str(value[0]).strip()]
         if not text_values:
@@ -177,6 +251,48 @@ def _sanity_check(connection: duckdb.DuckDBPyConnection, columns: list[dict[str,
 
 def _quoted_identifier(identifier: str) -> str:
     return '"' + identifier.replace('"', '""') + '"'
+
+
+def get_schema_context(table_name: str) -> str:
+    """Return a prompt-friendly schema and sample rows for a DuckDB table."""
+    if not table_name or not table_name.strip():
+        raise ValueError("table_name must not be empty")
+
+    quoted_table = _quoted_identifier(table_name.strip())
+    with duckdb.connect(str(DATABASE_PATH), read_only=True) as connection:
+        columns = connection.sql(f"DESCRIBE {quoted_table}").fetchall()
+        sample_result = connection.sql(f"SELECT * FROM {quoted_table} LIMIT 3")
+        sample_columns = [column[0] for column in sample_result.description]
+        sample_rows = [
+            json.dumps(dict(zip(sample_columns, row)), default=str, separators=(",", ":"))
+            for row in sample_result.fetchall()
+        ]
+
+    column_lines = "\n".join(
+        f"- {_quoted_identifier(name)}: {data_type}"
+        for name, data_type, *_ in columns
+    ) or "- (no columns)"
+    sample_text = "\n".join(f"- {row}" for row in sample_rows) or "- (no rows)"
+    return (
+        f"TABLE: {quoted_table}\n"
+        f"COLUMNS:\n{column_lines}\n"
+        f"SAMPLE ROWS (up to 3):\n{sample_text}\n"
+        "COLUMN HINTS:\n"
+        "- Period: Represents Year and Quarter as a float (e.g., 2011.06). To group by year, use FLOOR(Period).\n"
+        '- Data_value: This is a generic value column. When a user asks for "jobs", "revenue", or a specific metric, '
+        "you MUST filter using the Series_title_1 or Series_title_2 columns to isolate that metric.\n"
+        "- Suppressed: Contains nulls or specific flags."
+    )
+
+
+def _table_name_from_filename(filename: str) -> str:
+    stem = Path(filename).stem.lower()
+    table_name = re.sub(r"[^a-z0-9_]+", "_", stem).strip("_")
+    if not table_name:
+        table_name = "uploaded_data"
+    if table_name[0].isdigit():
+        table_name = f"table_{table_name}"
+    return table_name
 
 
 def _schema_prompt(connection: duckdb.DuckDBPyConnection) -> str:
@@ -236,7 +352,7 @@ async def upload_file(file: UploadFile = File(...)) -> dict:
                 dict(zip((column[0] for column in preview_result.description), row))
                 for row in preview_result.fetchall()
             ]
-            warnings = _sanity_check(connection, columns)
+            warnings = _sanity_check(connection, "uploaded_data", columns)
             schema_text = _schema_prompt(connection)
             connection.close()
         except Exception as error:
@@ -251,3 +367,33 @@ async def upload_file(file: UploadFile = File(...)) -> dict:
         "schema_text": schema_text,
         "sanity_check": {"passed": not warnings, "warnings": warnings},
     }
+
+
+@app.post("/api/upload")
+async def upload_csv(file: UploadFile = File(...)) -> dict:
+    """Ingest a CSV upload into a DuckDB table named after the file."""
+    filename = file.filename or ""
+    if Path(filename).suffix.lower() != ".csv":
+        raise HTTPException(status_code=415, detail="Only .csv files are supported")
+
+    content = await file.read()
+    if not content:
+        raise HTTPException(status_code=400, detail="The uploaded file is empty")
+
+    table_name = _table_name_from_filename(filename)
+    with tempfile.TemporaryDirectory() as directory:
+        path = Path(directory) / Path(filename).name
+        path.write_bytes(content)
+        try:
+            DATABASE_PATH.parent.mkdir(parents=True, exist_ok=True)
+            with duckdb.connect(str(DATABASE_PATH)) as connection:
+                quoted_table = _quoted_identifier(table_name)
+                connection.execute(
+                    f"CREATE OR REPLACE TABLE {quoted_table} AS "
+                    f"SELECT * FROM read_csv_auto('{_sql_path(path)}')"
+                )
+                row_count = connection.sql(f"SELECT COUNT(*) FROM {quoted_table}").fetchone()[0]
+        except (duckdb.Error, OSError) as error:
+            raise HTTPException(status_code=400, detail=f"Could not load file: {error}") from error
+
+    return {"table": table_name, "row_count": row_count}
