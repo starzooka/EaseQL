@@ -61,6 +61,7 @@ class Dataset(Base):
         back_populates="dataset",
         cascade="all, delete-orphan",
     )
+    chat_sessions: Mapped[list["ChatSession"]] = relationship("ChatSession", back_populates="dataset")
 
 
 class UserMemory(Base):
@@ -114,6 +115,11 @@ class ChatSession(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    dataset_id: Mapped[int | None] = mapped_column(
+        ForeignKey("datasets.id", ondelete="CASCADE"),
+        nullable=True,
+        index=True,
+    )
     title: Mapped[str | None] = mapped_column(String(255), nullable=True)
     created_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
     updated_at: Mapped[DateTime] = mapped_column(
@@ -124,6 +130,7 @@ class ChatSession(Base):
     )
 
     user: Mapped["User"] = relationship("User", back_populates="chat_sessions")
+    dataset: Mapped["Dataset | None"] = relationship("Dataset", back_populates="chat_sessions")
     messages: Mapped[list["ChatMessage"]] = relationship(
         "ChatMessage",
         back_populates="session",

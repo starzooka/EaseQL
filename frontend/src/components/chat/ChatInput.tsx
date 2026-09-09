@@ -29,7 +29,7 @@ export default function ChatInput({ disabled, sending, error, onSend }: ChatInpu
   };
 
   return (
-    <form onSubmit={submit} className="p-4 sm:p-6">
+    <form onSubmit={submit} className="p-3 sm:p-4">
       {error ? <p role="alert" className="mb-3 text-xs text-red-300">{error}</p> : null}
       <div className="flex items-end gap-3 rounded-lg border border-slate-700 bg-slate-950 p-2 transition focus-within:border-blue-500/70">
         <textarea

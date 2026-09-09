@@ -28,13 +28,7 @@ export default function MemoryItem({ memory, deleting, onEdit, onDelete }: Memor
     <li className="rounded-lg border border-slate-800 bg-slate-900/60 p-4">
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0">
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="rounded-full border border-blue-500/20 bg-blue-500/10 px-2 py-1 text-[10px] font-semibold tracking-wider text-blue-200 uppercase">
-              {memory.memory_type}
-            </span>
-            <span className="truncate text-xs font-medium text-slate-400">{memory.key}</span>
-          </div>
-          <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-slate-200">{memory.value}</p>
+          <p className="whitespace-pre-wrap text-sm leading-6 text-slate-200">{memory.value}</p>
           {expiration ? <p className="mt-2 text-[11px] text-slate-500">Expires {expiration}</p> : null}
         </div>
 

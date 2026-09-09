@@ -66,8 +66,8 @@ export default function SavedResultViewer({ queryId, onClose }: SavedResultViewe
     <div className="border-t border-slate-800 bg-slate-950 p-4 sm:p-6">
       <div className="mb-5 flex items-start justify-between gap-4">
         <div>
-          <p className="text-[10px] font-semibold tracking-[0.2em] text-blue-500 uppercase">Saved result</p>
-          <h3 className="mt-1 text-lg font-bold tracking-tight text-white">Persisted query</h3>
+          <p className="text-[10px] font-semibold tracking-[0.2em] text-blue-500 uppercase">Saved historical result</p>
+          <h3 className="mt-1 text-lg font-bold tracking-tight text-white">Previous query</h3>
         </div>
         <button
           type="button"
@@ -99,7 +99,10 @@ export default function SavedResultViewer({ queryId, onClose }: SavedResultViewe
         </div>
       ) : query ? (
         <>
-          <p className="mb-4 text-sm leading-6 text-slate-200">{query.natural_language_query}</p>
+          <div className="mb-4 rounded-lg border border-slate-800 bg-slate-900/60 p-4">
+            <span className="block text-[10px] font-bold tracking-wider text-slate-500 uppercase">Original question</span>
+            <p className="mt-1.5 text-sm leading-6 text-slate-200">{query.natural_language_query}</p>
+          </div>
 
           <div className="mb-4 grid gap-2 text-xs sm:grid-cols-4">
             <div className="rounded-lg border border-slate-800 bg-slate-900/60 p-3">
@@ -108,11 +111,13 @@ export default function SavedResultViewer({ queryId, onClose }: SavedResultViewe
             </div>
             <div className="rounded-lg border border-slate-800 bg-slate-900/60 p-3">
               <span className="block text-[10px] tracking-wider text-slate-500 uppercase">Rows</span>
-              <span className="mt-1 block font-semibold text-slate-200">{query.row_count ?? 0}</span>
+              <span className="mt-1 block font-semibold text-slate-200">{query.row_count ?? "Not recorded"}</span>
             </div>
             <div className="rounded-lg border border-slate-800 bg-slate-900/60 p-3">
               <span className="block text-[10px] tracking-wider text-slate-500 uppercase">Execution</span>
-              <span className="mt-1 block font-semibold text-slate-200">{query.execution_time_ms ?? 0} ms</span>
+              <span className="mt-1 block font-semibold text-slate-200">
+                {query.execution_time_ms === null ? "Not recorded" : `${query.execution_time_ms} ms`}
+              </span>
             </div>
             <div className="rounded-lg border border-slate-800 bg-slate-900/60 p-3">
               <span className="block text-[10px] tracking-wider text-slate-500 uppercase">Created</span>
@@ -131,14 +136,17 @@ export default function SavedResultViewer({ queryId, onClose }: SavedResultViewe
           </div>
 
           <div>
-            <div className="mb-2 text-[10px] font-bold tracking-wider text-slate-500 uppercase">Stored result data</div>
+            <div className="mb-2 flex items-center justify-between text-[10px] font-bold tracking-wider text-slate-500 uppercase">
+              <span>Stored result rows</span>
+              <span className="text-blue-500">read only</span>
+            </div>
             <div className="max-h-80 overflow-auto rounded-lg border border-slate-800 bg-slate-900">
               {rows.length > 0 ? (
                 <table className="w-full border-collapse text-left text-xs sm:text-sm">
-                  <thead className="sticky top-0 bg-slate-900 shadow-sm">
+                  <thead className="sticky top-0 z-10 bg-slate-900 shadow-sm">
                     <tr className="text-[10px] font-semibold tracking-wider text-slate-500 uppercase">
                       {columns.map((column) => (
-                        <th key={column} className="whitespace-nowrap border-b border-slate-800 px-4 py-3">{column}</th>
+                        <th key={column} className="whitespace-nowrap border-b border-slate-800 px-4 py-3 first:pl-5 sm:px-6 sm:py-4 sm:first:pl-7">{column}</th>
                       ))}
                     </tr>
                   </thead>
@@ -146,7 +154,7 @@ export default function SavedResultViewer({ queryId, onClose }: SavedResultViewe
                     {rows.map((row, rowIndex) => (
                       <tr key={rowIndex} className="transition-colors hover:bg-slate-800/50">
                         {columns.map((column) => (
-                          <td key={column} className="whitespace-nowrap px-4 py-3 text-slate-300">{displayValue(row[column])}</td>
+                          <td key={column} className="whitespace-nowrap px-4 py-3 text-slate-300 first:pl-5 sm:px-6 sm:py-4 sm:first:pl-7">{displayValue(row[column])}</td>
                         ))}
                       </tr>
                     ))}

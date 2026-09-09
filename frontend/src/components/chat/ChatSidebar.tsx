@@ -14,6 +14,7 @@ import NewChatButton from "./NewChatButton";
 interface ChatSidebarProps {
   selectedSessionId: number | null;
   onSelectSession: (sessionId: number | null) => void;
+  onCreatingChange: (creating: boolean) => void;
   isAuthenticated: boolean;
   refreshKey?: number;
 }
@@ -25,6 +26,7 @@ async function fetchChatSessions() {
 export default function ChatSidebar({
   selectedSessionId,
   onSelectSession,
+  onCreatingChange,
   isAuthenticated,
   refreshKey = 0,
 }: ChatSidebarProps) {
@@ -78,6 +80,7 @@ export default function ChatSidebar({
 
   const handleCreate = async () => {
     setCreating(true);
+    onCreatingChange(true);
     setError(null);
 
     try {
@@ -88,6 +91,7 @@ export default function ChatSidebar({
       setError(createError instanceof Error ? createError.message : "Could not create a chat.");
     } finally {
       setCreating(false);
+      onCreatingChange(false);
     }
   };
 
@@ -107,7 +111,7 @@ export default function ChatSidebar({
   };
 
   return (
-    <aside className="flex min-h-[16rem] flex-col rounded-xl border border-slate-800 bg-slate-950/80 p-4 shadow-lg lg:sticky lg:top-6 lg:h-[calc(100vh-3rem)] lg:min-h-0">
+    <aside className="flex min-h-[15rem] flex-col rounded-xl border border-slate-800 bg-slate-950/80 p-4 shadow-lg lg:sticky lg:top-8 lg:h-[calc(100vh-4rem)] lg:min-h-0">
       <div className="mb-4 flex items-start justify-between gap-3">
         <div>
           <p className="text-[10px] font-semibold tracking-[0.2em] text-blue-500 uppercase">01 / History</p>

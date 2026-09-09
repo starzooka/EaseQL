@@ -4,6 +4,8 @@ import type { ChatMessage } from "./chatMessages";
 export interface ChatSession {
   id: number;
   title: string | null;
+  dataset_id: number | null;
+  dataset_table_name?: string | null;
   created_at: string;
   updated_at: string;
   messages?: ChatMessage[];

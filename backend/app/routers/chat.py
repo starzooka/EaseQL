@@ -6,7 +6,7 @@ from sqlalchemy.orm import selectinload
 
 from ..auth import get_current_user
 from ..database import get_db
-from ..models import ChatHistory, ChatMessage, ChatMessageRole, ChatSession, User
+from ..models import ChatHistory, ChatMessage, ChatMessageRole, ChatSession, Dataset, User
 
 router = APIRouter(prefix="/api/chat", tags=["chat"])
 
@@ -42,15 +42,22 @@ def _query_response(query: ChatHistory) -> dict:
     }
 
 
-def _session_response(session: ChatSession, include_messages: bool = False) -> dict:
+def _session_response(
+    session: ChatSession,
+    include_messages: bool = False,
+    include_dataset: bool = False,
+) -> dict:
     response = {
         "id": session.id,
         "title": session.title,
+        "dataset_id": session.dataset_id,
         "created_at": session.created_at,
         "updated_at": session.updated_at,
     }
     if include_messages:
         response["messages"] = [_message_response(message) for message in session.messages]
+    if include_dataset:
+        response["dataset_table_name"] = session.dataset.table_name if session.dataset is not None else None
     return response
 
 
@@ -88,13 +95,16 @@ async def get_session(
 ) -> dict:
     result = await db.execute(
         select(ChatSession)
-        .options(selectinload(ChatSession.messages))
+        .options(
+            selectinload(ChatSession.messages.and_(ChatMessage.user_id == current_user.id)),
+            selectinload(ChatSession.dataset.and_(Dataset.user_id == current_user.id)),
+        )
         .where(ChatSession.id == session_id, ChatSession.user_id == current_user.id)
     )
     session = result.scalar_one_or_none()
     if session is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Chat session not found")
-    return _session_response(session, include_messages=True)
+    return _session_response(session, include_messages=True, include_dataset=True)
 
 
 @router.post("/sessions/{session_id}/messages", status_code=status.HTTP_201_CREATED)
@@ -138,7 +148,7 @@ async def list_messages(
 
     result = await db.execute(
         select(ChatMessage)
-        .where(ChatMessage.session_id == session_id)
+        .where(ChatMessage.session_id == session_id, ChatMessage.user_id == current_user.id)
         .order_by(ChatMessage.created_at.asc(), ChatMessage.id.asc())
     )
     return [_message_response(message) for message in result.scalars().all()]

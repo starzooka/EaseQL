@@ -32,7 +32,7 @@ function containsSensitiveSecret(values: Record<string, string | null>) {
 function getInitialValues(memory: UserMemory | null): MemoryFormValues {
   return {
     memory_type: memory?.memory_type ?? "preference",
-    key: memory?.key ?? "",
+    key: memory?.key ?? "user_preference",
     value: memory?.value ?? "",
     source: memory?.source ?? "user",
     expires_at: toDateTimeLocal(memory?.expires_at ?? null),
@@ -58,8 +58,8 @@ export default function MemoryForm({ memory, submitting, error, onSubmit, onCanc
       expires_at: values.expires_at ? new Date(values.expires_at).toISOString() : null,
     };
 
-    if (!normalizedValues.memory_type || !normalizedValues.key || !normalizedValues.value || !normalizedValues.source) {
-      setValidationError("Type, key, value, and source are required.");
+    if (!normalizedValues.value) {
+      setValidationError("Enter a preference or memory to save.");
       return;
     }
 
@@ -76,6 +76,12 @@ export default function MemoryForm({ memory, submitting, error, onSubmit, onCanc
     }
   };
 
+  const cancel = () => {
+    setValues(getInitialValues(memory));
+    setValidationError("");
+    onCancel();
+  };
+
   return (
     <form onSubmit={submit} className="rounded-lg border border-slate-800 bg-slate-900/60 p-4 sm:p-5">
       <div className="mb-4 flex items-start justify-between gap-4">
@@ -83,15 +89,6 @@ export default function MemoryForm({ memory, submitting, error, onSubmit, onCanc
           <p className="text-[10px] font-semibold tracking-[0.2em] text-blue-500 uppercase">{memory ? "Edit memory" : "New memory"}</p>
           <h3 className="mt-1 text-base font-bold text-white">{memory ? "Update preference" : "Remember a preference"}</h3>
         </div>
-        {memory ? (
-          <button
-            type="button"
-            onClick={onCancel}
-            className="text-xs font-medium text-slate-500 hover:text-slate-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/70"
-          >
-            Cancel
-          </button>
-        ) : null}
       </div>
 
       {validationError || error ? (
@@ -100,29 +97,9 @@ export default function MemoryForm({ memory, submitting, error, onSubmit, onCanc
         </div>
       ) : null}
 
-      <div className="grid gap-3 sm:grid-cols-2">
+      <div className="grid gap-3">
         <label className="text-xs text-slate-400">
-          Type
-          <input
-            value={values.memory_type}
-            onChange={(event) => updateField("memory_type", event.target.value)}
-            disabled={submitting}
-            className="mt-1.5 w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-2.5 text-sm text-slate-200 outline-none transition focus:border-blue-500 disabled:opacity-60"
-            placeholder="preference"
-          />
-        </label>
-        <label className="text-xs text-slate-400">
-          Key
-          <input
-            value={values.key}
-            onChange={(event) => updateField("key", event.target.value)}
-            disabled={submitting}
-            className="mt-1.5 w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-2.5 text-sm text-slate-200 outline-none transition focus:border-blue-500 disabled:opacity-60"
-            placeholder="default_chart"
-          />
-        </label>
-        <label className="text-xs text-slate-400 sm:col-span-2">
-          Value
+          Preference or memory
           <textarea
             value={values.value}
             onChange={(event) => updateField("value", event.target.value)}
@@ -133,17 +110,7 @@ export default function MemoryForm({ memory, submitting, error, onSubmit, onCanc
           />
         </label>
         <label className="text-xs text-slate-400">
-          Source
-          <input
-            value={values.source}
-            onChange={(event) => updateField("source", event.target.value)}
-            disabled={submitting}
-            className="mt-1.5 w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-2.5 text-sm text-slate-200 outline-none transition focus:border-blue-500 disabled:opacity-60"
-            placeholder="user"
-          />
-        </label>
-        <label className="text-xs text-slate-400">
-          Expires (optional)
+          Expiration (optional)
           <input
             type="datetime-local"
             value={values.expires_at ?? ""}
@@ -154,13 +121,23 @@ export default function MemoryForm({ memory, submitting, error, onSubmit, onCanc
         </label>
       </div>
 
-      <button
-        type="submit"
-        disabled={submitting}
-        className="mt-4 rounded-md bg-blue-600 px-4 py-2.5 text-xs font-semibold text-white transition hover:bg-blue-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/70 disabled:cursor-not-allowed disabled:bg-slate-800 disabled:text-slate-500"
-      >
-        {submitting ? "Saving..." : memory ? "Save changes" : "Save memory"}
-      </button>
+      <div className="mt-4 flex items-center gap-2">
+        <button
+          type="submit"
+          disabled={submitting}
+          className="rounded-md bg-blue-600 px-4 py-2.5 text-xs font-semibold text-white transition hover:bg-blue-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/70 disabled:cursor-not-allowed disabled:bg-slate-800 disabled:text-slate-500"
+        >
+          {submitting ? "Saving..." : "Save"}
+        </button>
+        <button
+          type="button"
+          onClick={cancel}
+          disabled={submitting}
+          className="rounded-md border border-slate-700 px-4 py-2.5 text-xs font-semibold text-slate-300 transition hover:border-slate-600 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/70 disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          Cancel
+        </button>
+      </div>
     </form>
   );
 }

@@ -14,6 +14,7 @@ OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "qwen2.5-coder:latest")
 TEXT_TO_SQL_PROMPT_PATH = Path(__file__).resolve().parents[3] / "local-llm" / "prompts" / "text-to-sql.txt"
 QUERY_TIMEOUT = os.getenv("DUCKDB_QUERY_TIMEOUT", "5s")
 MAX_QUERY_ROWS = 500
+EXPLICIT_ROW_COUNT_PATTERN = re.compile(r"\b(?:first\s+)?(\d+)\s+rows?\b", re.IGNORECASE)
 FORBIDDEN_SQL_KEYWORDS = {
     "ATTACH", "DETACH", "COPY", "CREATE", "DROP", "ALTER", "DELETE", "UPDATE",
     "INSERT", "MERGE", "PRAGMA", "INSTALL", "LOAD", "CALL", "SET",
@@ -75,6 +76,20 @@ def _validate_sql(statement: str) -> str:
     return statement
 
 
+def extract_requested_row_limit(question: str) -> int | None:
+    match = EXPLICIT_ROW_COUNT_PATTERN.search(question)
+    if match is None:
+        return None
+    return min(int(match.group(1)), MAX_QUERY_ROWS)
+
+
+def limit_sql(statement: str, row_limit: int | None = None) -> str:
+    validated_statement = _validate_sql(statement)
+    if row_limit is None:
+        return validated_statement
+    return f"SELECT * FROM ({validated_statement}) AS requested_query LIMIT {row_limit}"
+
+
 def execute_read_only_query(sql: str) -> dict:
     statement = _validate_sql(sql)
     connection = duckdb.connect(str(DATABASE_PATH), read_only=True)
@@ -123,13 +138,20 @@ async def generate_sql(
         ],
     }
     try:
-        async with httpx.AsyncClient(timeout=60) as client:
+        async with httpx.AsyncClient(timeout=180) as client:
             response = await client.post(OLLAMA_CHAT_URL, json=payload)
             response.raise_for_status()
             raw_text = response.json()["choices"][0]["message"]["content"]
             return clean_sql_response(raw_text)
+
     except (httpx.HTTPError, KeyError, IndexError, TypeError, ValueError) as error:
-        raise HTTPException(status_code=502, detail=f"Could not generate SQL from Ollama: {error}") from error
+        print(f"[OLLAMA ERROR] {type(error).__name__}: {error!r}")
+        raise HTTPException(
+            status_code=502,
+            detail=f"Could not generate SQL from Ollama: {type(error).__name__}: {error!r}",
+        ) from error   
+    # except (httpx.HTTPError, KeyError, IndexError, TypeError, ValueError) as error:
+    #     raise HTTPException(status_code=502, detail=f"Could not generate SQL from Ollama: {error}") from error
 
 
 def get_schema_context(table_name: str) -> str:

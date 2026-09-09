@@ -1,8 +1,17 @@
 type QueryResult = Record<string, unknown>;
 
+export interface MemorySuggestion {
+  suggested: true;
+  memory_type: string;
+  key: string;
+  value: string;
+  expires_at: string | null;
+}
+
 export interface QueryResponse {
   sql: string;
   results: QueryResult[];
+  memory_suggestion?: MemorySuggestion;
 }
 
 export interface ResultsDisplayProps {

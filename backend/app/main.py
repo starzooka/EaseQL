@@ -1,7 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from .database import Base, engine
 from .routers.auth import router as auth_router
 from .routers.chat import router as chat_router
 from .routers.memory import router as memory_router
@@ -26,12 +25,6 @@ def root() -> dict[str, str]:
 @app.get("/health")
 def health() -> dict[str, str]:
     return {"status": "healthy"}
-
-
-@app.on_event("startup")
-async def startup() -> None:
-    async with engine.begin() as connection:
-        await connection.run_sync(Base.metadata.create_all)
 
 
 app.include_router(auth_router)

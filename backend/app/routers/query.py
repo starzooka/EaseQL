@@ -1,4 +1,5 @@
 import json
+import re
 import time
 
 import duckdb
@@ -18,6 +19,7 @@ router = APIRouter(tags=["query"])
 RECENT_MESSAGE_LIMIT = 6
 MAX_CONTEXT_MESSAGE_LENGTH = 500
 MAX_CONTEXT_RESULT_LENGTH = 2000
+MAX_SESSION_TITLE_LENGTH = 60
 
 
 class SQLRequest(BaseModel):
@@ -34,6 +36,32 @@ class APIQueryRequest(BaseModel):
     natural_language_query: str = Field(min_length=1)
     dataset_id: int = Field(ge=1)
     session_id: int | None = Field(default=None, ge=1)
+
+
+def _build_session_title(question: str) -> str:
+    normalized_question = " ".join(question.split()).strip(" .?!")
+    highest_match = re.fullmatch(
+        r"(?:which|what)\s+(.+?)\s+had\s+the\s+(highest|lowest)\s+(.+)",
+        normalized_question,
+        flags=re.IGNORECASE,
+    )
+    if highest_match:
+        dimension, direction, metric = highest_match.groups()
+        title = f"{metric.title()} by {dimension.title()}"
+        if direction.lower() == "lowest":
+            title = f"Lowest {metric.title()} by {dimension.title()}"
+    else:
+        title = re.sub(
+            r"^(?:please\s+)?(?:show|list|display|give me|tell me)\s+",
+            "",
+            normalized_question,
+            flags=re.IGNORECASE,
+        )
+        title = re.sub(r"\s+for\s+", " ", title, flags=re.IGNORECASE)
+        title = re.sub(r"\s+", " ", title).strip()
+        title = " ".join(title.split()[:8]).title()
+
+    return title[:MAX_SESSION_TITLE_LENGTH].rstrip()
 
 
 def _build_conversation_context(messages: list[ChatMessage], query: ChatHistory | None) -> str:
@@ -106,6 +134,7 @@ async def api_query(
         raise HTTPException(status_code=404, detail="Dataset not found")
 
     session = None
+    session_has_user_message = False
     conversation_context = ""
     if request.session_id is not None:
         session = (
@@ -118,6 +147,19 @@ async def api_query(
         ).scalar_one_or_none()
         if session is None:
             raise HTTPException(status_code=404, detail="Chat session not found")
+
+        if not session.title:
+            session_has_user_message = (
+                await db.execute(
+                    select(ChatMessage.id)
+                    .where(
+                        ChatMessage.session_id == session.id,
+                        ChatMessage.user_id == current_user.id,
+                        ChatMessage.role == ChatMessageRole.USER,
+                    )
+                    .limit(1)
+                )
+            ).scalar_one_or_none() is not None
 
         recent_messages = list(
             reversed(
@@ -176,6 +218,9 @@ async def api_query(
                 )
             else:
                 generated_sql = await sql_service.generate_sql(schema_context, generation_question)
+            requested_row_limit = sql_service.extract_requested_row_limit(request.natural_language_query)
+            if requested_row_limit is not None:
+                generated_sql = sql_service.limit_sql(generated_sql, requested_row_limit)
             execution_started = time.perf_counter()
             execution_result = sql_service.execute_read_only_query(generated_sql)
             execution_time_ms = round((time.perf_counter() - execution_started) * 1000)
@@ -215,10 +260,13 @@ async def api_query(
                         session_id=session.id,
                         user_id=current_user.id,
                         role=ChatMessageRole.ASSISTANT,
-                        content=json.dumps(execution_result["rows"], default=str),
+                        content=f"Query completed successfully. {execution_result['row_count']} rows returned.",
                     ),
                 ]
             )
+            session.dataset_id = dataset.id
+            if not session.title and not session_has_user_message:
+                session.title = _build_session_title(request.natural_language_query)
             session.updated_at = func.now()
         await db.commit()
         response = {"sql": generated_sql, "results": execution_result["rows"]}
@@ -230,7 +278,7 @@ async def api_query(
     raise HTTPException(status_code=400, detail=last_error or "Query execution failed after 3 attempts")
 
 
-@router.get("/api/history/{dataset_id}")
+@router.get("/api/history/{dataset_id}", deprecated=True)
 async def get_history(
     dataset_id: int,
     current_user: User = Depends(get_current_user),
