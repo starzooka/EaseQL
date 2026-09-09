@@ -1,20 +1,68 @@
-import type { Dispatch, FormEventHandler, SetStateAction } from "react";
+import { useEffect, useState, type Dispatch, type FormEventHandler, type SetStateAction } from "react";
+import { useRouter } from "next/navigation";
+import { useAuth } from "./auth/useAuth";
 
 export interface QueryFormProps {
   tableName: string;
+  datasetId: number | null;
   question: string;
   setQuestion: Dispatch<SetStateAction<string>>;
   querying: boolean;
   submitQuestion: FormEventHandler<HTMLFormElement>;
+  historyRefreshKey: number;
 }
+
+type HistoryEntry = {
+  id: number;
+  natural_language_query: string;
+  generated_sql: string;
+  created_at: string;
+};
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
 export default function QueryForm({
   tableName,
+  datasetId,
   question,
   setQuestion,
   querying,
   submitQuestion,
+  historyRefreshKey,
 }: QueryFormProps) {
+  const router = useRouter();
+  const { logout, isAuthenticated } = useAuth();
+  const [history, setHistory] = useState<HistoryEntry[]>([]);
+  const [historyDatasetId, setHistoryDatasetId] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (!datasetId || !isAuthenticated) return;
+
+    let cancelled = false;
+    const loadHistory = async () => {
+      const response = await fetch(`${API_URL}/api/history/${datasetId}`, {
+        credentials: "include",
+      });
+
+      if (response.status === 401) {
+        logout();
+        router.replace("/login");
+        return;
+      }
+
+      if (!response.ok || cancelled) return;
+      setHistory((await response.json()) as HistoryEntry[]);
+      setHistoryDatasetId(datasetId);
+    };
+
+    void loadHistory();
+    return () => {
+      cancelled = true;
+    };
+  }, [datasetId, historyRefreshKey, isAuthenticated, logout, router]);
+
+  const visibleHistory = historyDatasetId === datasetId && isAuthenticated ? history : [];
+
   return (
     <div className="flex h-full flex-col rounded-xl border border-slate-800 bg-slate-900 p-5 shadow-lg transition-all duration-300 hover:border-slate-700 sm:p-7">
       <div className="mb-5 flex items-center justify-between sm:mb-6">
@@ -25,6 +73,20 @@ export default function QueryForm({
         <span className="text-xl text-slate-600 sm:text-2xl">✦</span>
       </div>
       
+      {visibleHistory.length > 0 && (
+        <div className="mb-5 max-h-40 overflow-y-auto rounded-lg border border-slate-800 bg-slate-950/70 p-3 sm:mb-6">
+          <p className="mb-2 text-[10px] font-semibold tracking-wider text-slate-500 uppercase">Recent questions</p>
+          <div className="space-y-2">
+            {visibleHistory.map((entry) => (
+              <div key={entry.id} className="border-l-2 border-blue-500/50 pl-3">
+                <p className="text-xs leading-5 text-slate-300">{entry.natural_language_query}</p>
+                <p className="mt-0.5 truncate font-mono text-[10px] text-slate-600">{entry.generated_sql}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       <form onSubmit={submitQuestion} className="flex flex-1 flex-col">
         <textarea
           value={question}
