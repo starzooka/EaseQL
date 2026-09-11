@@ -10,57 +10,117 @@ interface ChatMessagesProps {
   error: string;
 }
 
-function sortChronologically(messages: ChatMessageData[]) {
+function sortChronologically(
+  messages: ChatMessageData[]
+) {
   return [...messages].sort((left, right) => {
-    const timeDifference = Date.parse(left.created_at) - Date.parse(right.created_at);
-    return timeDifference || left.id - right.id;
+    const timeDifference =
+      Date.parse(left.created_at) -
+      Date.parse(right.created_at);
+
+    return (
+      timeDifference ||
+      left.id - right.id
+    );
   });
 }
 
-export default function ChatMessages({ messages, loading, thinking, error }: ChatMessagesProps) {
-  const orderedMessages = sortChronologically(messages);
+export default function ChatMessages({
+  messages,
+  loading,
+  thinking,
+  error,
+}: ChatMessagesProps) {
+  const orderedMessages =
+    sortChronologically(messages);
 
   return (
-    <div className="border-b border-slate-800/80 p-4 sm:p-6">
-      <div className="mb-4 flex items-end justify-between gap-4">
-        <div>
-          <p className="text-[10px] font-semibold tracking-[0.2em] text-blue-500 uppercase">02 / Conversation</p>
-          <h2 className="mt-1 text-lg font-bold tracking-tight text-white">Ask in context</h2>
+    <div className="bg-[var(--ink)]">
+      {/* Conversation heading */}
+      <div className="flex items-center justify-between border-b border-[var(--line)] px-4 py-3 sm:px-5">
+        <div className="flex items-center gap-2">
+          <span
+            className="text-[10px] font-semibold tracking-[0.16em] uppercase text-[var(--amber)]"
+          >
+            02 / Conversation
+          </span>
+
+          <span className="text-[var(--line-strong)]">
+            /
+          </span>
+
+          <span className="text-[10px] tracking-[0.08em] uppercase text-[var(--muted)]">
+            Ask in context
+          </span>
         </div>
-        <span aria-hidden="true" className="text-lg text-slate-700">✦</span>
+
+        <span
+          aria-hidden="true"
+          className="text-sm text-[var(--line-strong)]"
+        >
+          ✦
+        </span>
       </div>
 
+      {/* Error */}
       {error ? (
-        <div role="alert" className="mb-4 rounded-lg border border-red-500/20 bg-red-500/5 px-3 py-2.5 text-xs leading-5 text-red-200">
+        <div
+          role="alert"
+          className="mx-4 mt-3 border-l-2 border-[var(--danger)] bg-[rgba(217,107,95,0.06)] px-3 py-2 text-xs leading-5 text-[var(--danger)] sm:mx-5"
+        >
           {error}
         </div>
       ) : null}
 
-      <div className="max-h-[28rem] min-h-32 overflow-y-auto pr-1">
+      {/* Messages */}
+      <div className="max-h-[24rem] min-h-[11rem] overflow-y-auto px-3 py-3 sm:px-4 sm:py-4">
         {loading ? (
-          <div className="space-y-3" aria-label="Loading conversation">
-            <div className="h-16 w-4/5 animate-pulse rounded-xl bg-slate-900" />
-            <div className="ml-auto h-16 w-3/5 animate-pulse rounded-xl bg-slate-900" />
+          <div
+            className="space-y-2"
+            aria-label="Loading conversation"
+          >
+            <div className="h-10 w-2/5 animate-pulse bg-[var(--line)]" />
+            <div className="ml-auto h-10 w-1/3 animate-pulse bg-[var(--line)]" />
+            <div className="h-12 w-1/2 animate-pulse bg-[var(--line)]" />
           </div>
-        ) : orderedMessages.length === 0 && !thinking ? (
-          <div className="flex min-h-32 items-center justify-center rounded-lg border border-dashed border-slate-800 px-4 text-center">
-            <p className="text-xs leading-5 text-slate-500">Your questions and answers will appear here.</p>
+        ) : orderedMessages.length === 0 &&
+          !thinking ? (
+          <div className="flex min-h-[11rem] items-center justify-center text-center">
+            <p className="max-w-sm text-xs leading-5 text-[var(--muted)]">
+              Your questions and answers will
+              appear here.
+            </p>
           </div>
         ) : (
-          <ul className="space-y-3" aria-live="polite" aria-label="Conversation messages">
-            {orderedMessages.map((message) => (
-              <ChatMessage key={message.id} message={message} />
-            ))}
+          <ul
+            className="space-y-2.5"
+            aria-live="polite"
+            aria-label="Conversation messages"
+          >
+            {orderedMessages.map(
+              (message) => (
+                <ChatMessage
+                  key={message.id}
+                  message={message}
+                />
+              )
+            )}
+
             {thinking ? (
-              <li className="flex justify-start" aria-label="EaseQL is thinking">
-                <div className="rounded-xl border border-slate-800 bg-slate-900 px-4 py-3 text-xs text-slate-500">
-                  <span className="inline-flex items-center gap-1.5">
-                    Thinking
-                    <span className="flex gap-1" aria-hidden="true">
-                      <span className="h-1 w-1 animate-pulse rounded-full bg-blue-400" />
-                      <span className="h-1 w-1 animate-pulse rounded-full bg-blue-400 [animation-delay:150ms]" />
-                      <span className="h-1 w-1 animate-pulse rounded-full bg-blue-400 [animation-delay:300ms]" />
-                    </span>
+              <li
+                className="flex justify-start"
+                aria-label="EaseQL is thinking"
+              >
+                <div className="flex items-center gap-2 bg-[rgba(237,234,226,0.045)] px-3 py-2 text-[11px] text-[var(--muted)]">
+                  <span>Thinking</span>
+
+                  <span
+                    className="flex gap-1"
+                    aria-hidden="true"
+                  >
+                    <span className="h-1 w-1 animate-pulse rounded-full bg-[var(--amber)]" />
+                    <span className="h-1 w-1 animate-pulse rounded-full bg-[var(--amber)] [animation-delay:150ms]" />
+                    <span className="h-1 w-1 animate-pulse rounded-full bg-[var(--amber)] [animation-delay:300ms]" />
                   </span>
                 </div>
               </li>

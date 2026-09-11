@@ -94,27 +94,27 @@ export default function MemoryPanel() {
   };
 
   return (
-    <section className="overflow-hidden rounded-xl border border-slate-800 bg-slate-950/70 shadow-lg">
-      <div className="border-b border-slate-800/80 p-4 sm:p-6">
+    <section className="overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--ink)]/70 shadow-lg">
+      <div className="border-b border-[var(--line)] p-4 sm:p-6">
         <div className="flex items-end justify-between gap-4">
           <div>
-            <p className="text-[10px] font-semibold tracking-[0.2em] text-blue-500 uppercase">05 / Memory</p>
-            <h2 className="mt-1 text-lg font-bold tracking-tight text-white">Preferences</h2>
+            <p className="text-[10px] font-semibold tracking-[0.2em] text-[var(--amber)] uppercase">05 / Memory</p>
+            <h2 className="mt-1 text-lg font-bold tracking-tight text-[var(--paper)]">Preferences</h2>
           </div>
-          <span className="text-xs text-slate-500">{memories.length} saved</span>
+          <span className="text-xs text-[var(--muted)]">{memories.length} saved</span>
         </div>
-        <p className="mt-2 max-w-2xl text-xs leading-5 text-slate-500">Save useful preferences for future context. Never store passwords, tokens, credentials, or other secrets.</p>
+        <p className="mt-2 max-w-2xl text-xs leading-5 text-[var(--muted)]">Save useful preferences for future context. Never store passwords, tokens, credentials, or other secrets.</p>
       </div>
 
       <div className="grid gap-6 p-4 sm:p-6 lg:grid-cols-[minmax(0,1.1fr)_minmax(18rem,0.9fr)]">
         <div>
           {error ? (
-            <div role="alert" className="mb-4 rounded-lg border border-red-500/20 bg-red-500/5 px-3 py-2.5 text-xs leading-5 text-red-200">
+            <div role="alert" className="mb-4 rounded-lg border border-[rgba(217,107,95,0.35)] bg-[rgba(217,107,95,0.06)] px-3 py-2.5 text-xs leading-5 text-[var(--danger)]">
               <p>{error}</p>
               <button
                 type="button"
                 onClick={() => void loadMemories()}
-                className="mt-2 font-semibold text-red-300 underline decoration-red-400/50 underline-offset-4 hover:text-red-100"
+                className="mt-2 font-semibold text-[var(--danger)] underline decoration-red-400/50 underline-offset-4 hover:text-[var(--paper)]"
               >
                 Try again
               </button>
@@ -123,12 +123,12 @@ export default function MemoryPanel() {
 
           {loading ? (
             <div className="space-y-3" aria-label="Loading memories">
-              <div className="h-24 animate-pulse rounded-lg bg-slate-900" />
-              <div className="h-24 animate-pulse rounded-lg bg-slate-900" />
+              <div className="h-24 animate-pulse rounded-lg bg-[var(--ink)]" />
+              <div className="h-24 animate-pulse rounded-lg bg-[var(--ink)]" />
             </div>
           ) : memories.length === 0 ? (
-            <div className="flex min-h-24 items-center justify-center rounded-lg border border-dashed border-slate-800 px-4 text-center">
-              <p className="text-xs leading-5 text-slate-500">No saved preferences yet.</p>
+            <div className="flex min-h-24 items-center justify-center rounded-lg border border-dashed border-[var(--line)] px-4 text-center">
+              <p className="text-xs leading-5 text-[var(--muted)]">No saved preferences yet.</p>
             </div>
           ) : (
             <ul className="space-y-3" aria-label="Saved memories">

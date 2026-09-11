@@ -248,6 +248,9 @@ export default function Home() {
   const [sidebarRefreshKey, setSidebarRefreshKey] =
     useState(0);
 
+  const [sidebarCollapsed, setSidebarCollapsed] =
+    useState(false);
+
   const sessionInitializationPromise =
     useRef<
       Promise<{
@@ -481,9 +484,9 @@ export default function Home() {
     !isAuthenticated
   ) {
     return (
-      <main className="min-h-screen bg-[#0a0a0a] font-sans text-slate-300 antialiased">
+      <main className="min-h-screen bg-[var(--ink)] font-sans text-[var(--paper)] antialiased">
         <div className="mx-auto flex min-h-screen max-w-7xl items-center justify-center px-4 sm:px-8 lg:px-10">
-          <p className="text-sm text-slate-400">
+          <p className="text-sm text-[var(--muted)]">
             Checking your session...
           </p>
         </div>
@@ -1036,8 +1039,14 @@ export default function Home() {
       : [];
 
   return (
-    <main className="min-h-screen bg-[#0a0a0a] font-sans text-slate-300 antialiased selection:bg-blue-500/30 selection:text-blue-200">
-      <div className="mx-auto grid max-w-[90rem] items-start gap-5 px-3 py-4 pb-16 sm:px-6 sm:py-6 lg:grid-cols-[17rem_minmax(0,1fr)] lg:gap-7 lg:px-8 lg:py-8">
+    <main className="min-h-screen bg-[var(--ink)] font-sans text-[var(--paper)] antialiased selection:bg-[color-mix(in_srgb,var(--amber)_20%,transparent)] selection:text-[var(--amber)]">
+      <div
+        className={`easeql-layout mx-auto grid max-w-[90rem] items-start gap-5 px-3 py-4 pb-16 sm:px-6 sm:py-6 lg:grid-cols-[17rem_minmax(0,1fr)] lg:gap-7 lg:px-8 lg:py-8${
+          sidebarCollapsed
+            ? " sidebar-collapsed"
+            : ""
+        }`}
+      >
         <ChatSidebar
           selectedSessionId={
             sessionId
@@ -1054,9 +1063,17 @@ export default function Home() {
           refreshKey={
             sidebarRefreshKey
           }
+          collapsed={
+            sidebarCollapsed
+          }
+          onToggleCollapse={() =>
+            setSidebarCollapsed(
+              (current) => !current
+            )
+          }
         />
 
-        <div className="flex min-w-0 flex-col gap-5 sm:gap-6">
+        <div className="easeql-main flex min-w-0 flex-col gap-5 sm:gap-6">
           <Header
             onOpenPreferences={() =>
               setPreferencesOpen(
@@ -1073,7 +1090,7 @@ export default function Home() {
           />
 
           {sessionLoading ? (
-            <p className="text-xs text-slate-500">
+            <p className="text-xs text-[var(--muted)]">
               Starting your chat
               session...
             </p>
@@ -1082,7 +1099,7 @@ export default function Home() {
           {sessionError ? (
             <div
               role="alert"
-              className="rounded-lg border border-red-500/20 bg-red-500/5 px-4 py-3 text-xs text-red-200"
+              className="rounded-lg border border-[color-mix(in_srgb,var(--danger)_25%,transparent)] bg-[color-mix(in_srgb,var(--danger)_6%,transparent)] px-4 py-3 text-xs text-[var(--danger)]"
             >
               <p>
                 {sessionError}
@@ -1093,7 +1110,7 @@ export default function Home() {
                 onClick={
                   retrySessionLoad
                 }
-                className="mt-2 font-semibold text-red-300 underline underline-offset-4"
+                className="mt-2 font-semibold text-[var(--amber)] underline underline-offset-4"
               >
                 Try again
               </button>
@@ -1103,7 +1120,7 @@ export default function Home() {
           {sessionDataError ? (
             <div
               role="alert"
-              className="rounded-lg border border-red-500/20 bg-red-500/5 px-4 py-3 text-xs text-red-200"
+              className="rounded-lg border border-[color-mix(in_srgb,var(--danger)_25%,transparent)] bg-[color-mix(in_srgb,var(--danger)_6%,transparent)] px-4 py-3 text-xs text-[var(--danger)]"
             >
               <p>
                 {sessionDataError}
@@ -1114,7 +1131,7 @@ export default function Home() {
                 onClick={
                   retrySessionLoad
                 }
-                className="mt-2 font-semibold text-red-300 underline underline-offset-4"
+                className="mt-2 font-semibold text-[var(--amber)] underline underline-offset-4"
               >
                 Try again
               </button>
@@ -1122,12 +1139,12 @@ export default function Home() {
           ) : null}
 
           {sessionDataLoading ? (
-            <p className="text-xs text-slate-500">
+            <p className="text-xs text-[var(--muted)]">
               Loading chat history...
             </p>
           ) : null}
 
-          <section className="overflow-hidden rounded-xl border border-slate-800 bg-slate-950/70 shadow-lg">
+          <section className="overflow-hidden border border-[var(--line)] bg-[color-mix(in_srgb,var(--ink)_88%,transparent)] shadow-[0_8px_30px_rgba(0,0,0,0.18)]">
             <ChatMessages
               messages={
                 sessionMessages
@@ -1241,7 +1258,7 @@ export default function Home() {
 
       {preferencesOpen ? (
         <div
-          className="fixed inset-0 z-50 overflow-y-auto bg-black/70 px-4 py-8 sm:px-8"
+          className="fixed inset-0 z-50 overflow-y-auto bg-[color-mix(in_srgb,var(--ink)_82%,transparent)] px-4 py-8 sm:px-8"
           role="dialog"
           aria-modal="true"
           aria-labelledby="preferences-title"
@@ -1262,7 +1279,7 @@ export default function Home() {
             <div className="mb-3 flex items-center justify-between px-1">
               <h2
                 id="preferences-title"
-                className="text-sm font-semibold text-white"
+                className="text-sm font-semibold text-[var(--paper)]"
               >
                 Preferences
               </h2>
@@ -1274,7 +1291,7 @@ export default function Home() {
                     false
                   )
                 }
-                className="rounded-md px-2 py-1 text-xs font-medium text-slate-400 transition hover:bg-slate-800 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/70"
+                className="rounded-md border border-[var(--line)] px-3 py-2 text-xs font-medium text-[var(--muted)] transition hover:border-[var(--line-strong)] hover:bg-[color-mix(in_srgb,var(--paper)_4%,transparent)] hover:text-[var(--paper)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--amber)]"
               >
                 Close
               </button>
