@@ -3,7 +3,7 @@ from pathlib import Path
 from app.services.sql_service import clean_sql_response
 
 
-def test_clean_sql_response_handles_model_wrappers():
+def test_clean_sql_response_handles_common_llm_wrappers():
     assert clean_sql_response("Here is the query:\n```sql\nSELECT * FROM uploaded_data;\n```") == "SELECT * FROM uploaded_data;"
     assert clean_sql_response("SQL: SELECT COUNT(*) FROM uploaded_data;") == "SELECT COUNT(*) FROM uploaded_data;"
     assert clean_sql_response("The answer is:\nWITH rows AS (SELECT 1) SELECT * FROM rows") == "WITH rows AS (SELECT 1) SELECT * FROM rows"

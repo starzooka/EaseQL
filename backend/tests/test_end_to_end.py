@@ -3,17 +3,32 @@ from unittest.mock import patch
 
 
 class FakeOllamaResponse:
-    def __init__(self, sql: str):
-        self.sql = sql
+    def __init__(self, table_name: str):
+        self.table_name = table_name
 
     def raise_for_status(self):
         return None
 
     def json(self):
-        return {"choices": [{"message": {"content": self.sql}}]}
+        return {"choices": [{"message": {"content": f'SELECT * FROM "{self.table_name}" LIMIT 5'}}]}
 
 
-def test_end_to_end_upload_query_flow(authenticated_client):
+class FakeAsyncClient:
+    def __init__(self, timeout: int, table_name: str):
+        assert timeout == 180
+        self.table_name = table_name
+
+    async def __aenter__(self):
+        return self
+
+    async def __aexit__(self, exc_type, exc_value, traceback):
+        return None
+
+    async def post(self, url, json):
+        return FakeOllamaResponse(self.table_name)
+
+
+def test_upload_query_end_to_end(authenticated_client):
     sample_path = Path(__file__).with_name("sample_sales.csv")
     with sample_path.open("rb") as sample_file:
         upload_response = authenticated_client.post(
@@ -25,22 +40,8 @@ def test_end_to_end_upload_query_flow(authenticated_client):
     upload = upload_response.json()
     assert upload["row_count"] == 8
 
-    class FakeOllamaClient:
-        def __init__(self, timeout):
-            assert timeout == 180
-
-        async def __aenter__(self):
-            return self
-
-        async def __aexit__(self, exc_type, exc_value, traceback):
-            return None
-
-        async def post(self, url, json):
-            schema = json["messages"][1]["content"]
-            table_name = schema.split('TABLE: "', 1)[1].split('"', 1)[0]
-            return FakeOllamaResponse(f'SELECT * FROM "{table_name}" LIMIT 5')
-
-    with patch("app.services.sql_service.httpx.AsyncClient", FakeOllamaClient):
+    fake_client = lambda timeout: FakeAsyncClient(timeout, upload["table"])
+    with patch("app.services.sql_service.httpx.AsyncClient", fake_client):
         query_response = authenticated_client.post(
             "/api/query",
             json={
