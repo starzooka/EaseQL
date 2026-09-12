@@ -8,7 +8,10 @@ interface ChatMessageProps {
 
 function formatMessageTime(value: string) {
   const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "";
+
+  if (Number.isNaN(date.getTime())) {
+    return "";
+  }
 
   return new Intl.DateTimeFormat(undefined, {
     hour: "numeric",
@@ -16,30 +19,61 @@ function formatMessageTime(value: string) {
   }).format(date);
 }
 
-export default function ChatMessage({ message }: ChatMessageProps) {
+export default function ChatMessage({
+  message,
+}: ChatMessageProps) {
   const isUser = message.role === "user";
   const isSystem = message.role === "system";
 
   return (
-    <li className={`flex ${isUser ? "justify-end" : "justify-start"}`}>
+    <li
+      className={`flex w-full ${
+        isUser ? "justify-end" : "justify-start"
+      }`}
+    >
       <article
-        className={`max-w-[88%] rounded-xl border px-4 py-3 sm:max-w-[76%] ${
+        className={[
+          "easeql-message",
+          "transition-colors",
           isUser
-            ? "border-blue-500/30 bg-blue-600/15 text-blue-50"
+            ? "easeql-message--user"
             : isSystem
-              ? "border-slate-800 bg-slate-900/70 text-slate-400"
-              : "border-slate-800 bg-slate-900 text-slate-200"
-        }`}
+              ? "easeql-message--system"
+              : "easeql-message--assistant",
+        ].join(" ")}
       >
-        <div className="mb-1 flex items-center justify-between gap-4">
-          <span className="text-[10px] font-semibold tracking-wider text-slate-500 uppercase">
-            {isUser ? "You" : isSystem ? "System" : "EaseQL"}
+        <div
+          className={`flex items-center gap-2 ${
+            isUser ? "justify-end" : "justify-start"
+          }`}
+        >
+          <span
+            className={`text-[9px] font-semibold tracking-[0.12em] uppercase ${
+              isUser
+                ? "text-[var(--user-chat)] brightness-160"
+                : isSystem
+                  ? "text-[var(--muted)]"
+                  : "text-[var(--amber)]"
+            }`}
+          >
+            {isUser
+              ? "You"
+              : isSystem
+                ? "System"
+                : "EaseQL"}
           </span>
-          <time dateTime={message.created_at} className="text-[10px] text-slate-600">
+
+          <time
+            dateTime={message.created_at}
+            className="text-[9px] text-[var(--muted)]"
+          >
             {formatMessageTime(message.created_at)}
           </time>
         </div>
-        <p className="whitespace-pre-wrap text-sm leading-6">{message.content}</p>
+
+        <p className="mt-1 whitespace-pre-wrap text-[13px] leading-5">
+          {message.content}
+        </p>
       </article>
     </li>
   );

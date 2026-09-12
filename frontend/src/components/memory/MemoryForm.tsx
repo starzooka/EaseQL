@@ -83,40 +83,40 @@ export default function MemoryForm({ memory, submitting, error, onSubmit, onCanc
   };
 
   return (
-    <form onSubmit={submit} className="rounded-lg border border-slate-800 bg-slate-900/60 p-4 sm:p-5">
+    <form onSubmit={submit} className="rounded-lg border border-[var(--line)] bg-[rgba(138,133,120,0.05)] p-4 sm:p-5">
       <div className="mb-4 flex items-start justify-between gap-4">
         <div>
-          <p className="text-[10px] font-semibold tracking-[0.2em] text-blue-500 uppercase">{memory ? "Edit memory" : "New memory"}</p>
-          <h3 className="mt-1 text-base font-bold text-white">{memory ? "Update preference" : "Remember a preference"}</h3>
+          <p className="text-[10px] font-semibold tracking-[0.2em] text-[var(--amber)] uppercase">{memory ? "Edit memory" : "New memory"}</p>
+          <h3 className="mt-1 text-base font-bold text-[var(--paper)]">{memory ? "Update preference" : "Remember a preference"}</h3>
         </div>
       </div>
 
       {validationError || error ? (
-        <div role="alert" className="mb-4 rounded-lg border border-red-500/20 bg-red-500/5 px-3 py-2.5 text-xs leading-5 text-red-200">
+        <div role="alert" className="mb-4 rounded-lg border border-[rgba(217,107,95,0.35)] bg-[rgba(217,107,95,0.06)] px-3 py-2.5 text-xs leading-5 text-[var(--danger)]">
           {validationError || error}
         </div>
       ) : null}
 
       <div className="grid gap-3">
-        <label className="text-xs text-slate-400">
+        <label className="text-xs text-[var(--muted)]">
           Preference or memory
           <textarea
             value={values.value}
             onChange={(event) => updateField("value", event.target.value)}
             disabled={submitting}
             rows={3}
-            className="mt-1.5 w-full resize-y rounded-md border border-slate-700 bg-slate-950 px-3 py-2.5 text-sm leading-6 text-slate-200 outline-none transition focus:border-blue-500 disabled:opacity-60"
+            className="mt-1.5 w-full resize-y rounded-md border border-[var(--line-strong)] bg-[var(--ink)] px-3 py-2.5 text-sm leading-6 text-[var(--paper)] outline-none transition focus:border-[var(--amber)] disabled:opacity-60"
             placeholder="Bar charts work best for monthly comparisons."
           />
         </label>
-        <label className="text-xs text-slate-400">
+        <label className="text-xs text-[var(--muted)]">
           Expiration (optional)
           <input
             type="datetime-local"
             value={values.expires_at ?? ""}
             onChange={(event) => updateField("expires_at", event.target.value)}
             disabled={submitting}
-            className="mt-1.5 w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-2.5 text-sm text-slate-200 outline-none transition focus:border-blue-500 disabled:opacity-60"
+            className="mt-1.5 w-full rounded-md border border-[var(--line-strong)] bg-[var(--ink)] px-3 py-2.5 text-sm text-[var(--paper)] outline-none transition focus:border-[var(--amber)] disabled:opacity-60"
           />
         </label>
       </div>
@@ -125,7 +125,7 @@ export default function MemoryForm({ memory, submitting, error, onSubmit, onCanc
         <button
           type="submit"
           disabled={submitting}
-          className="rounded-md bg-blue-600 px-4 py-2.5 text-xs font-semibold text-white transition hover:bg-blue-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/70 disabled:cursor-not-allowed disabled:bg-slate-800 disabled:text-slate-500"
+          className="rounded-md bg-[var(--amber)] px-4 py-2.5 text-xs font-semibold text-[var(--paper)] transition hover:bg-[var(--amber)] focus:outline-none focus-visible:ring-1 focus-visible:ring-[var(--amber)] disabled:cursor-not-allowed disabled:bg-[var(--line)] disabled:text-[var(--muted)]"
         >
           {submitting ? "Saving..." : "Save"}
         </button>
@@ -133,7 +133,7 @@ export default function MemoryForm({ memory, submitting, error, onSubmit, onCanc
           type="button"
           onClick={cancel}
           disabled={submitting}
-          className="rounded-md border border-slate-700 px-4 py-2.5 text-xs font-semibold text-slate-300 transition hover:border-slate-600 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/70 disabled:cursor-not-allowed disabled:opacity-60"
+          className="rounded-md border border-[var(--line-strong)] px-4 py-2.5 text-xs font-semibold text-[var(--paper)] transition hover:border-[var(--line-strong)] hover:text-[var(--paper)] focus:outline-none focus-visible:ring-1 focus-visible:ring-[var(--amber)] disabled:cursor-not-allowed disabled:opacity-60"
         >
           Cancel
         </button>

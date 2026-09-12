@@ -10,7 +10,11 @@ interface HeaderProps {
   datasetLabel: string;
 }
 
-export default function Header({ onOpenPreferences, sessionTitle, datasetLabel }: HeaderProps) {
+export default function Header({
+  onOpenPreferences,
+  sessionTitle,
+  datasetLabel,
+}: HeaderProps) {
   const router = useRouter();
   const { logout, isAuthenticated } = useAuth();
 
@@ -20,39 +24,55 @@ export default function Header({ onOpenPreferences, sessionTitle, datasetLabel }
   };
 
   return (
-    <header className="border-b border-slate-800/80 pb-5">
+    <header className="border-b border-[var(--line)] pb-4">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div className="flex min-w-0 items-center gap-3">
-          <div className="flex shrink-0 items-center gap-2 text-xs font-bold tracking-widest text-blue-500 uppercase">
-            <span className="flex h-2.5 w-2.5 items-center justify-center rounded-full bg-blue-500/20">
-              <span className="h-1.5 w-1.5 rounded-full bg-blue-500" />
+          <div className="flex shrink-0 items-center gap-2 text-xs font-semibold tracking-[0.16em] uppercase text-[var(--amber)]">
+            <span
+              className="flex h-2.5 w-2.5 items-center justify-center border border-[rgba(232,163,61,0.35)]"
+              aria-hidden="true"
+            >
+              <span className="h-1.5 w-1.5 bg-[var(--amber)]" />
             </span>
+
             EaseQL
           </div>
-          <span className="text-slate-700">/</span>
+
+          <span className="text-[var(--line-strong)]">/</span>
+
           <div className="min-w-0">
-            <p className="truncate text-sm font-semibold text-white">{sessionTitle}</p>
-            <p className="mt-0.5 truncate text-[10px] tracking-wider text-slate-500 uppercase">Active session</p>
+            <p className="truncate text-sm font-medium text-[var(--paper)]">
+              {sessionTitle}
+            </p>
+
+            <p className="mt-0.5 truncate text-[10px] tracking-[0.12em] uppercase text-[var(--muted)]">
+              Active session
+            </p>
           </div>
         </div>
 
         <div className="flex items-center gap-2">
-          <div className="max-w-48 truncate rounded-md border border-slate-800 bg-slate-900 px-3 py-1.5 text-[10px] font-semibold tracking-wider text-slate-400 uppercase" title={datasetLabel}>
+          <div
+            className="max-w-48 truncate border border-[var(--line)] bg-transparent px-3 py-2 text-[10px] font-semibold tracking-[0.1em] uppercase text-[var(--teal)]"
+            title={datasetLabel}
+          >
             {datasetLabel}
           </div>
+
           {isAuthenticated ? (
             <div className="flex items-center gap-2">
               <button
                 type="button"
                 onClick={onOpenPreferences}
-                className="rounded-md border border-slate-700 bg-slate-900 px-3 py-1.5 text-xs font-medium text-slate-200 transition hover:border-blue-500 hover:text-blue-200"
+                className="border border-[var(--line-strong)] bg-transparent px-3 py-2 text-xs font-medium text-[var(--paper)] transition-colors hover:border-[var(--amber)] hover:text-[var(--amber)] focus:outline-none focus-visible:ring-1 focus-visible:ring-[var(--amber)]"
               >
                 Preferences
               </button>
+
               <button
                 type="button"
                 onClick={handleSignOut}
-                className="rounded-md border border-slate-700 bg-slate-900 px-3 py-1.5 text-xs font-medium text-slate-200 transition hover:border-blue-500 hover:text-blue-200"
+                className="border border-[var(--line-strong)] bg-transparent px-3 py-2 text-xs font-medium text-[var(--muted)] transition-colors hover:border-[var(--amber)] hover:text-[var(--amber)] focus:outline-none focus-visible:ring-1 focus-visible:ring-[var(--amber)]"
               >
                 Sign Out
               </button>

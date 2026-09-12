@@ -1,6 +1,10 @@
 "use client";
 
-import { useState, type FormEvent, type KeyboardEvent } from "react";
+import {
+  useState,
+  type FormEvent,
+  type KeyboardEvent,
+} from "react";
 
 interface ChatInputProps {
   disabled: boolean;
@@ -9,48 +13,194 @@ interface ChatInputProps {
   onSend: (content: string) => Promise<boolean>;
 }
 
-export default function ChatInput({ disabled, sending, error, onSend }: ChatInputProps) {
+export default function ChatInput({
+  disabled,
+  sending,
+  error,
+  onSend,
+}: ChatInputProps) {
   const [content, setContent] = useState("");
 
-  const submit = async (event: FormEvent<HTMLFormElement>) => {
+  const submit = async (
+    event: FormEvent<HTMLFormElement>
+  ) => {
     event.preventDefault();
-    const trimmedContent = content.trim();
-    if (!trimmedContent || disabled || sending) return;
 
-    const sent = await onSend(trimmedContent);
-    if (sent) setContent("");
+    const trimmedContent = content.trim();
+
+    if (
+      !trimmedContent ||
+      disabled ||
+      sending
+    ) {
+      return;
+    }
+
+    const sent = await onSend(
+      trimmedContent
+    );
+
+    if (sent) {
+      setContent("");
+    }
   };
 
-  const handleKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
-    if (event.key === "Enter" && !event.shiftKey) {
+  const handleKeyDown = (
+    event: KeyboardEvent<HTMLTextAreaElement>
+  ) => {
+    if (
+      event.key === "Enter" &&
+      !event.shiftKey
+    ) {
       event.preventDefault();
       event.currentTarget.form?.requestSubmit();
     }
   };
 
+  const sendDisabled =
+    disabled ||
+    sending ||
+    !content.trim();
+
   return (
-    <form onSubmit={submit} className="p-3 sm:p-4">
-      {error ? <p role="alert" className="mb-3 text-xs text-red-300">{error}</p> : null}
-      <div className="flex items-end gap-3 rounded-lg border border-slate-700 bg-slate-950 p-2 transition focus-within:border-blue-500/70">
+    <form
+      onSubmit={submit}
+      className="border-t border-[var(--line)] bg-[var(--ink)] px-3 py-3 sm:px-4"
+    >
+      {error ? (
+        <p
+          role="alert"
+          className="mb-2 px-1 text-xs text-[var(--danger)]"
+        >
+          {error}
+        </p>
+      ) : null}
+
+      <div
+        className="
+          flex items-center gap-2
+          border border-[var(--line-strong)]
+          bg-[var(--ink)]
+          px-3 py-2
+          transition-colors
+          focus-within:border-[var(--amber)]
+        "
+      >
+        <span
+          aria-hidden="true"
+          className="select-none text-sm text-[var(--amber)]"
+        >
+          ›
+        </span>
+
         <textarea
           value={content}
-          onChange={(event) => setContent(event.target.value)}
+          onChange={(event) =>
+            setContent(event.target.value)
+          }
           onKeyDown={handleKeyDown}
-          disabled={disabled || sending}
-          rows={2}
-          placeholder={disabled ? "Select a chat to continue..." : "Send a message..."}
+          disabled={
+            disabled || sending
+          }
+          rows={1}
+          placeholder={
+            disabled
+              ? "Select a chat to continue..."
+              : "Send a message..."
+          }
           aria-label="Send a chat message"
-          className="min-h-12 flex-1 resize-none bg-transparent px-2 py-1.5 text-sm leading-6 text-slate-200 placeholder:text-slate-600 focus:outline-none disabled:cursor-not-allowed disabled:opacity-60"
+          className="
+            min-h-9
+            max-h-28
+            flex-1
+            resize-none
+            bg-transparent
+            py-1
+            text-sm
+            leading-6
+            text-[var(--paper)]
+            placeholder:text-[var(--muted)]
+            focus:outline-none
+            disabled:cursor-not-allowed
+            disabled:opacity-50
+          "
         />
+
         <button
           type="submit"
-          disabled={disabled || sending || !content.trim()}
-          className="rounded-md bg-blue-600 px-4 py-2 text-xs font-semibold text-white transition hover:bg-blue-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400/70 disabled:cursor-not-allowed disabled:bg-slate-800 disabled:text-slate-500"
+          disabled={sendDisabled}
+          aria-label={
+            sending
+              ? "Sending message"
+              : "Send message"
+          }
+          title={
+            sending
+              ? "Sending..."
+              : "Send message"
+          }
+          className="
+            flex h-9 w-9 shrink-0
+            items-center justify-center
+            border border-[var(--amber)]
+            bg-[var(--amber)]
+            p-0
+            text-[var(--ink)]
+            transition-colors
+            hover:bg-[#f0b04f]
+            focus:outline-none
+            focus-visible:ring-1
+            focus-visible:ring-[var(--amber)]
+            disabled:cursor-not-allowed
+            disabled:border-[var(--line)]
+            disabled:bg-[var(--line)]
+            disabled:text-[var(--muted)]
+          "
         >
-          {sending ? "Sending..." : "Send"}
+          {sending ? (
+            <svg
+              className="h-4 w-4 animate-spin"
+              viewBox="0 0 24 24"
+              fill="none"
+              aria-hidden="true"
+            >
+              <circle
+                cx="12"
+                cy="12"
+                r="9"
+                stroke="currentColor"
+                strokeWidth="2"
+                opacity="0.3"
+              />
+
+              <path
+                d="M21 12a9 9 0 0 0-9-9"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+              />
+            </svg>
+          ) : (
+            <svg
+              className="h-4 w-4"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M5 12h13" />
+              <path d="m13 6 6 6-6 6" />
+            </svg>
+          )}
         </button>
       </div>
-      <p className="mt-2 text-[10px] text-slate-600">Shift + Enter for a new line</p>
+
+      <p className="mt-1.5 px-1 text-[9px] text-[var(--muted)]">
+        Shift + Enter for a new line
+      </p>
     </form>
   );
 }

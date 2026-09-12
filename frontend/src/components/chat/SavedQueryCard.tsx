@@ -10,7 +10,10 @@ interface SavedQueryCardProps {
 
 function formatDate(value: string) {
   const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "Unknown date";
+
+  if (Number.isNaN(date.getTime())) {
+    return "Unknown date";
+  }
 
   return new Intl.DateTimeFormat(undefined, {
     month: "short",
@@ -19,9 +22,17 @@ function formatDate(value: string) {
   }).format(date);
 }
 
-export default function SavedQueryCard({ query, selected, onOpen }: SavedQueryCardProps) {
+export default function SavedQueryCard({
+  query,
+  selected,
+  onOpen,
+}: SavedQueryCardProps) {
   const status = query.execution_status ?? "unknown";
-  const statusColor = status === "success" ? "text-emerald-300" : "text-amber-300";
+
+  const statusColor =
+    status === "success"
+      ? "text-[var(--teal)]"
+      : "text-[var(--amber)]";
 
   return (
     <li>
@@ -29,25 +40,34 @@ export default function SavedQueryCard({ query, selected, onOpen }: SavedQueryCa
         type="button"
         onClick={() => onOpen(query.id)}
         aria-pressed={selected}
-        className={`w-full rounded-lg border p-4 text-left transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/70 ${
+        className={`w-full border p-4 text-left transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-[var(--amber)] ${
           selected
-            ? "border-blue-500/50 bg-blue-500/10"
-            : "border-slate-800 bg-slate-900/60 hover:border-slate-700 hover:bg-slate-900"
+            ? "border-[var(--amber)] bg-[rgba(232,163,61,0.05)]"
+            : "border-[var(--line)] bg-transparent hover:border-[var(--line-strong)] hover:bg-[rgba(237,234,226,0.02)]"
         }`}
       >
         <div className="flex items-start justify-between gap-4">
-          <p className="line-clamp-2 min-w-0 flex-1 text-sm font-medium leading-5 text-slate-200">
+          <p className="line-clamp-2 min-w-0 flex-1 text-sm font-medium leading-5 text-[var(--paper)]">
             {query.natural_language_query}
           </p>
-          <span className={`shrink-0 text-[10px] font-semibold tracking-wider uppercase ${statusColor}`}>
+
+          <span
+            className={`shrink-0 text-[10px] font-semibold tracking-wider uppercase ${statusColor}`}
+          >
             {status}
           </span>
         </div>
-        <p className="mt-2 truncate font-mono text-[11px] text-slate-500">{query.generated_sql}</p>
-        <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-[10px] text-slate-500">
+
+        <p className="mt-2 truncate font-mono text-[11px] text-[var(--amber)]">
+          {query.generated_sql}
+        </p>
+
+        <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-[10px] text-[var(--muted)]">
           <span>{query.row_count ?? 0} rows</span>
           <span>{query.execution_time_ms ?? 0} ms</span>
-          <time dateTime={query.created_at}>{formatDate(query.created_at)}</time>
+          <time dateTime={query.created_at}>
+            {formatDate(query.created_at)}
+          </time>
         </div>
       </button>
     </li>

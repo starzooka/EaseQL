@@ -1,15 +1,18 @@
 @import "tailwindcss";
 
 :root {
-  --background: #f6f7f2;
-  --foreground: #14231f;
-}
+  --background: #15130f;
+  --foreground: #edeae2;
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --ink: #15130f;
+  --paper: #edeae2;
+  --amber: #e8a33d;
+  --teal: #5fa88f;
+  --user-chat: #007bff;
+  --muted: #8a8578;
+  --line: #2a251c;
+  --line-strong: #40382c;
+  --danger: #d96b5f;
 }
 
 html {
@@ -26,9 +29,12 @@ body {
   min-height: 100%;
   display: flex;
   flex-direction: column;
+
   color: var(--foreground);
   background: var(--background);
+
   font-family: var(--font-geist-sans), sans-serif;
+
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
@@ -44,3 +50,579 @@ a {
   text-decoration: none;
 }
 
+/* =========================================================
+   GENERAL BUTTONS
+   ========================================================= */
+
+button {
+  padding: 8px 12px;
+  min-height: 34px;
+  font: inherit;
+}
+
+button.icon-button {
+  padding: 7px;
+  min-width: 32px;
+  min-height: 32px;
+}
+
+button.primary-button {
+  padding: 9px 16px;
+  min-height: 38px;
+}
+
+button.secondary-button {
+  padding: 7px 12px;
+  min-height: 32px;
+}
+
+/* =========================================================
+   COLLAPSIBLE CHAT SIDEBAR
+   ========================================================= */
+
+.easeql-layout {
+  transition: grid-template-columns 0.2s ease;
+}
+
+.easeql-layout.sidebar-collapsed {
+  grid-template-columns: 68px minmax(0, 1fr);
+}
+
+/* ---------------------------------------------------------
+   Sidebar base
+   --------------------------------------------------------- */
+
+.easeql-sidebar {
+  box-sizing: border-box;
+  min-width: 0;
+}
+
+/* ---------------------------------------------------------
+   Sidebar header
+   --------------------------------------------------------- */
+
+.easeql-sidebar-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.easeql-wordmark {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+}
+
+.easeql-mark {
+  flex: 0 0 auto;
+}
+
+.easeql-sidebar-toggle {
+  width: 25px;
+  height: 25px;
+  min-width: 25px;
+  min-height: 25px;
+
+  flex: 0 0 25px;
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  padding: 0;
+
+  border: 1px solid var(--line);
+  background: transparent;
+
+  color: var(--muted);
+
+  font-family: var(--font-mono), monospace;
+  font-size: 17px;
+  line-height: 1;
+
+  transition:
+    border-color 0.16s ease,
+    color 0.16s ease,
+    background 0.16s ease;
+}
+
+.easeql-sidebar-toggle:hover {
+  border-color: var(--amber);
+  color: var(--amber);
+  background: rgba(232, 163, 61, 0.05);
+}
+
+/* ---------------------------------------------------------
+   Collapsed sidebar
+   --------------------------------------------------------- */
+
+.easeql-sidebar.is-collapsed {
+  box-sizing: border-box;
+
+  width: 68px;
+  min-width: 68px;
+  max-width: 68px;
+
+  padding-left: 12px;
+  padding-right: 12px;
+}
+
+/*
+ * The sidebar has a 68px grid column.
+ * With 12px padding on either side, the actual content width
+ * is 44px. Everything below is explicitly constrained to
+ * that width so nothing gets pushed to the left.
+ */
+
+.easeql-sidebar.is-collapsed
+  .easeql-sidebar-top,
+.easeql-sidebar.is-collapsed
+  .easeql-wordmark,
+.easeql-sidebar.is-collapsed
+  .easeql-new-chat-slot,
+.easeql-sidebar.is-collapsed
+  .easeql-chat-list {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* Header */
+
+.easeql-sidebar.is-collapsed
+  .easeql-sidebar-top {
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 12px;
+}
+
+.easeql-sidebar.is-collapsed
+  .easeql-wordmark {
+  justify-content: center;
+}
+
+/* Hide text */
+
+.easeql-sidebar.is-collapsed
+  .easeql-wordmark-text,
+
+.easeql-sidebar.is-collapsed
+  .easeql-sidebar-heading,
+
+.easeql-sidebar.is-collapsed
+  .easeql-new-chat-label,
+
+.easeql-sidebar.is-collapsed
+  .easeql-sidebar-error,
+
+.easeql-sidebar.is-collapsed
+  .easeql-sidebar-footer {
+  display: none;
+}
+
+/* ---------------------------------------------------------
+   Collapsed new chat
+   --------------------------------------------------------- */
+
+.easeql-new-chat-slot {
+  width: 100%;
+}
+
+.easeql-sidebar.is-collapsed
+  .easeql-new-chat-slot {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  margin-top: 8px;
+}
+
+.easeql-sidebar.is-collapsed
+  .easeql-new-chat {
+  width: 36px;
+  min-width: 36px;
+  max-width: 36px;
+
+  height: 36px;
+  min-height: 36px;
+
+  padding: 0;
+  margin: 0;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.easeql-sidebar.is-collapsed
+  .easeql-new-chat-symbol {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  width: 100%;
+  height: 100%;
+
+  margin: 0;
+
+  line-height: 1;
+  text-align: center;
+}
+
+/* ---------------------------------------------------------
+   Chat list
+   --------------------------------------------------------- */
+
+.easeql-sidebar.is-collapsed
+  .easeql-chat-list {
+  margin-top: 12px;
+  padding-right: 0;
+  padding-left: 0;
+}
+
+.easeql-sidebar.is-collapsed
+  .easeql-chat-list ul {
+  width: 100%;
+  margin: 0;
+  padding: 0;
+
+  list-style: none;
+}
+
+/* ---------------------------------------------------------
+   Individual chat sessions
+   --------------------------------------------------------- */
+
+.easeql-chat-session {
+  display: flex;
+  align-items: center;
+
+  gap: 8px;
+  padding: 8px 0;
+}
+
+.easeql-sidebar.is-collapsed
+  .easeql-chat-session {
+  width: 100%;
+  box-sizing: border-box;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  padding: 8px 0;
+}
+
+.easeql-chat-session-button {
+  min-width: 0;
+  flex: 1;
+
+  border: 0;
+  background: transparent;
+
+  text-align: left;
+  outline: none;
+}
+
+.easeql-sidebar.is-collapsed
+  .easeql-chat-session-button {
+  width: 36px;
+  min-width: 36px;
+  max-width: 36px;
+
+  height: 32px;
+  min-height: 32px;
+
+  flex: 0 0 36px;
+
+  padding: 0;
+  margin: 0;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  text-align: center;
+}
+
+.easeql-chat-session-button:focus-visible {
+  outline: 1px solid var(--amber);
+  outline-offset: 3px;
+}
+
+.easeql-chat-session-title {
+  display: block;
+
+  overflow: hidden;
+
+  font-size: 11px;
+  font-weight: 500;
+
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.easeql-sidebar.is-collapsed
+  .easeql-chat-session-title {
+  width: 100%;
+
+  text-align: center;
+}
+
+/* Hide date/delete controls when collapsed */
+
+.easeql-sidebar.is-collapsed
+  .easeql-chat-session-date,
+
+.easeql-sidebar.is-collapsed
+  .easeql-chat-delete {
+  display: none;
+}
+
+/* ---------------------------------------------------------
+   Chat session date
+   --------------------------------------------------------- */
+
+.easeql-chat-session-date {
+  display: block;
+
+  margin-top: 4px;
+
+  color: #625d53;
+
+  font-family: var(--font-mono), monospace;
+  font-size: 8px;
+
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+/* ---------------------------------------------------------
+   Delete button
+   --------------------------------------------------------- */
+
+.easeql-chat-delete {
+  border: 0;
+  background: transparent;
+
+  padding: 0 4px;
+
+  color: #625d53;
+
+  font-family: var(--font-mono), monospace;
+  font-size: 13px;
+
+  opacity: 0;
+
+  transition:
+    color 0.16s ease,
+    opacity 0.16s ease;
+}
+
+.easeql-chat-session:hover
+  .easeql-chat-delete,
+
+.easeql-chat-delete:focus {
+  opacity: 1;
+}
+
+.easeql-chat-delete:hover {
+  color: var(--danger);
+}
+
+/* ---------------------------------------------------------
+   Empty history
+   --------------------------------------------------------- */
+
+.easeql-sidebar.is-collapsed
+  .easeql-empty-history {
+  width: 100%;
+
+  text-align: center;
+  font-size: 0;
+}
+
+.easeql-sidebar.is-collapsed
+  .easeql-empty-history::before {
+  content: "—";
+
+  color: var(--muted);
+  font-size: 12px;
+}
+
+/* ---------------------------------------------------------
+   Loading state
+   --------------------------------------------------------- */
+
+.easeql-chat-loading {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.easeql-chat-loading > div {
+  height: 46px;
+
+  border-top: 1px solid var(--line);
+
+  opacity: 0.65;
+}
+
+
+/* =========================================================
+   CHAT MESSAGE BUBBLES
+   ========================================================= */
+
+.easeql-message {
+  position: relative;
+  max-width: 78%;
+  padding: 10px 14px;
+  color: var(--paper);
+}
+
+.easeql-message--user {
+  margin-left: auto;
+  border-radius: 18px 18px 4px 18px;
+  background: color-mix(
+    in srgb,
+    var(--user-chat) 22%,
+    transparent
+  );
+}
+
+.easeql-message--system {
+  border-left: 2px solid var(--muted);
+  border-radius: 18px 18px 18px 4px;
+  background: rgba(138, 133, 120, 0.07);
+  color: var(--muted);
+}
+
+.easeql-message--assistant {
+  border-radius: 18px 18px 18px 4px;
+  background: rgba(237, 234, 226, 0.045);
+}
+
+@media (max-width: 640px) {
+  .easeql-message {
+    max-width: 88%;
+  }
+}
+
+/* =========================================================
+   MOBILE
+   ========================================================= */
+
+@media (max-width: 900px) {
+  .easeql-layout.sidebar-collapsed {
+    grid-template-columns: 1fr;
+  }
+
+  .easeql-sidebar.is-collapsed {
+    width: auto;
+    min-width: 0;
+    max-width: none;
+
+    padding: 15px 18px;
+  }
+
+  .easeql-sidebar.is-collapsed
+    .easeql-sidebar-top {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .easeql-sidebar.is-collapsed
+    .easeql-wordmark-text,
+
+  .easeql-sidebar.is-collapsed
+    .easeql-new-chat-label,
+
+  .easeql-sidebar.is-collapsed
+    .easeql-sidebar-footer {
+    display: inline;
+  }
+
+  .easeql-sidebar.is-collapsed
+    .easeql-sidebar-heading {
+    display: none;
+  }
+
+  .easeql-sidebar.is-collapsed
+    .easeql-new-chat-slot {
+    display: block;
+    margin-top: 0;
+  }
+
+  .easeql-sidebar.is-collapsed
+    .easeql-new-chat {
+    width: auto;
+    min-width: 0;
+    max-width: none;
+
+    height: auto;
+    min-height: 36px;
+
+    padding: 10px 11px;
+
+    justify-content: flex-start;
+  }
+
+  .easeql-sidebar.is-collapsed
+    .easeql-chat-list {
+    margin-top: 14px;
+    padding-right: 3px;
+
+    max-height: 190px;
+    overflow-y: auto;
+  }
+
+  .easeql-sidebar.is-collapsed
+    .easeql-chat-session {
+    justify-content: initial;
+    padding: 8px 0;
+  }
+
+  .easeql-sidebar.is-collapsed
+    .easeql-chat-session-button {
+    width: auto;
+    min-width: 0;
+    max-width: none;
+
+    height: auto;
+    min-height: 32px;
+
+    flex: 1 1 auto;
+
+    padding: 0;
+
+    justify-content: flex-start;
+
+    text-align: left;
+  }
+
+  .easeql-sidebar.is-collapsed
+    .easeql-chat-session-title {
+    text-align: left;
+  }
+
+  .easeql-sidebar.is-collapsed
+    .easeql-chat-session-date,
+
+  .easeql-sidebar.is-collapsed
+    .easeql-chat-delete {
+    display: block;
+  }
+
+  .easeql-sidebar.is-collapsed
+    .easeql-empty-history {
+    text-align: left;
+    font-size: 11px;
+  }
+
+  .easeql-sidebar.is-collapsed
+    .easeql-empty-history::before {
+    content: none;
+  }
+}
