@@ -6,7 +6,7 @@ from unittest.mock import patch
 import duckdb
 import pytest
 
-import app.main as main
+from app.services import sql_service
 
 
 TEST_CASES = [
@@ -56,7 +56,7 @@ class FakeResponse:
 
 class FakeAsyncClient:
     def __init__(self, timeout: int):
-        assert timeout == 60
+        assert timeout == 180
 
     async def __aenter__(self):
         return self
@@ -70,12 +70,9 @@ class FakeAsyncClient:
 
 
 @pytest.fixture(autouse=True)
-def employment_database_and_llm(tmp_path: Path):
-    original_database_path = main.DATABASE_PATH
-    database_path = tmp_path / "employment.duckdb"
-    main.DATABASE_PATH = database_path
+def employment_database_and_llm(duckdb_database):
 
-    with duckdb.connect(str(database_path)) as connection:
+    with duckdb.connect(str(duckdb_database)) as connection:
         connection.execute(
             """
             CREATE TABLE employment AS SELECT * FROM (VALUES
@@ -85,23 +82,20 @@ def employment_database_and_llm(tmp_path: Path):
             """
         )
 
-    with patch("app.main.httpx.AsyncClient", FakeAsyncClient):
+    with patch("app.services.sql_service.httpx.AsyncClient", FakeAsyncClient):
         yield
-    main.DATABASE_PATH = original_database_path
 
 
 @pytest.mark.parametrize("natural_language_query, expected_substrings", TEST_CASES)
 def test_sql_generation(natural_language_query, expected_substrings):
-    schema_text = main.get_schema_context("employment")
+    schema_text = sql_service.get_schema_context("employment")
     result = asyncio.run(
-        main.generate_sql(
-            main.SQLRequest(schema_text=schema_text, question=natural_language_query)
-        )
+        sql_service.generate_sql(schema_text, natural_language_query)
     )
 
-    generated_sql = re.sub(r"\s+", "", result["sql"]).casefold()
+    generated_sql = re.sub(r"\s+", "", result).casefold()
     for expected_substring in expected_substrings:
         normalized_expected = re.sub(r"\s+", "", expected_substring).casefold()
         assert normalized_expected in generated_sql, (
-            f"Expected {expected_substring!r} in generated SQL {result['sql']!r}"
+            f"Expected {expected_substring!r} in generated SQL {result!r}"
         )
