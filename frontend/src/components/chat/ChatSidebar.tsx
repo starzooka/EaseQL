@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   createChatSession,
   deleteChatSession,
@@ -10,6 +11,7 @@ import {
 
 import ChatSessionItem from "./ChatSessionItem";
 import NewChatButton from "./NewChatButton";
+import { useAuth } from "@/components/auth/useAuth";
 
 interface ChatSidebarProps {
   selectedSessionId: number | null;
@@ -30,12 +32,16 @@ export default function ChatSidebar({
   collapsed,
   onToggleCollapse,
 }: ChatSidebarProps) {
+  const router = useRouter();
+  const { logout, userEmail } = useAuth();
   const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
   const [deletingSessionId, setDeletingSessionId] =
     useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [profileOpen, setProfileOpen] = useState(false);
+  const profileRef = useRef<HTMLDivElement>(null);
 
   const loadSessions = useCallback(async () => {
     if (!isAuthenticated) {
@@ -115,9 +121,39 @@ export default function ChatSidebar({
     }
   };
 
+  useEffect(() => {
+    const handlePointerDown = (event: PointerEvent) => {
+      if (
+        profileRef.current &&
+        !profileRef.current.contains(event.target as Node)
+      ) {
+        setProfileOpen(false);
+      }
+    };
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setProfileOpen(false);
+      }
+    };
+
+    document.addEventListener("pointerdown", handlePointerDown);
+    document.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      document.removeEventListener("pointerdown", handlePointerDown);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, []);
+
+  const handleSignOut = () => {
+    logout();
+    router.push("/login");
+  };
+
   return (
     <aside
-      className={`easeql-sidebar${
+      className={`easeql-sidebar flex h-full min-h-0 flex-col${
         collapsed ? " is-collapsed" : ""
       }`}
     >
@@ -133,7 +169,7 @@ export default function ChatSidebar({
           />
 
           <span className="easeql-wordmark-text">
-            EaseQL
+            History
           </span>
         </div>
 
@@ -157,11 +193,6 @@ export default function ChatSidebar({
           </span>
         </button>
       </div>
-
-      {/* History heading */}
-      <p className="easeql-sidebar-heading">
-        History
-      </p>
 
       {/* New chat */}
       <div
@@ -235,9 +266,48 @@ export default function ChatSidebar({
         )}
       </div>
 
-      {/* Sidebar footer */}
+      {/* Sidebar footer
       <div className="easeql-sidebar-footer">
         Local / private / your data
+      </div> */}
+
+      <div ref={profileRef} className="easeql-profile">
+        {profileOpen ? (
+          <div className="easeql-profile-menu" role="menu">
+            <p className="easeql-profile-label">Signed in as</p>
+            <p className="easeql-profile-email" title={userEmail ?? undefined}>
+              {userEmail ?? "Authenticated user"}
+            </p>
+            <button
+              type="button"
+              role="menuitem"
+              onClick={handleSignOut}
+              className="easeql-profile-signout"
+            >
+              Sign Out
+            </button>
+          </div>
+        ) : null}
+
+        <button
+          type="button"
+          className="easeql-profile-button"
+          aria-expanded={profileOpen}
+          aria-haspopup="menu"
+          aria-label="Open profile menu"
+          onClick={() => setProfileOpen((current) => !current)}
+        >
+          <span className="easeql-profile-avatar" aria-hidden="true">
+            {userEmail?.slice(0, 1).toUpperCase() ?? "U"}
+          </span>
+          <span className="easeql-profile-details">
+            <span className="easeql-profile-name">{userEmail ?? "Account"}</span>
+            <span className="easeql-profile-caption">Profile</span>
+          </span>
+          <span className="easeql-profile-chevron" aria-hidden="true">
+            {profileOpen ? "⌃" : "⌄"}
+          </span>
+        </button>
       </div>
     </aside>
   );

@@ -1041,7 +1041,7 @@ export default function Home() {
   return (
     <main className="min-h-screen bg-[var(--ink)] font-sans text-[var(--paper)] antialiased selection:bg-[color-mix(in_srgb,var(--amber)_20%,transparent)] selection:text-[var(--amber)]">
       <div
-        className={`easeql-layout mx-auto grid max-w-[90rem] items-start gap-5 px-3 py-4 pb-16 sm:px-6 sm:py-6 lg:grid-cols-[17rem_minmax(0,1fr)] lg:gap-7 lg:px-8 lg:py-8${
+        className={`easeql-layout grid w-full max-w-none items-start gap-5 px-3 py-4 pb-16 sm:px-6 sm:py-6 lg:grid-cols-[17rem_minmax(0,1fr)] lg:gap-7 lg:px-8 lg:py-8${
           sidebarCollapsed
             ? " sidebar-collapsed"
             : ""
@@ -1144,67 +1144,69 @@ export default function Home() {
             </p>
           ) : null}
 
-          <section className="overflow-hidden border border-[var(--line)] bg-[color-mix(in_srgb,var(--ink)_88%,transparent)] shadow-[0_8px_30px_rgba(0,0,0,0.18)]">
-            <ChatMessages
-              messages={
-                sessionMessages
-              }
-              loading={
-                sessionDataLoading
-              }
-              thinking={
-                messageSending
-              }
-              error={
-                sessionDataError
-              }
-            />
+          <div className="grid items-stretch gap-5 lg:grid-cols-[minmax(0,7fr)_minmax(260px,3fr)] lg:gap-6">
+            <section className="flex h-full min-h-0 flex-col overflow-hidden border border-[var(--line)] bg-[color-mix(in_srgb,var(--ink)_88%,transparent)] shadow-[0_8px_30px_rgba(0,0,0,0.18)]">
+              <ChatMessages
+                messages={
+                  sessionMessages
+                }
+                loading={
+                  sessionDataLoading
+                }
+                thinking={
+                  messageSending
+                }
+                error={
+                  sessionDataError
+                }
+              />
 
-            <ChatInput
-              disabled={
-                !sessionId ||
-                sessionLoading ||
-                sessionDataLoading ||
-                sessionCreating
-              }
-              sending={
-                messageSending
-              }
-              error={
-                messageError
-              }
-              onSend={
-                handleSendMessage
-              }
-            />
-          </section>
+              <ChatInput
+                disabled={
+                  !sessionId ||
+                  sessionLoading ||
+                  sessionDataLoading ||
+                  sessionCreating
+                }
+                sending={
+                  messageSending
+                }
+                error={
+                  messageError
+                }
+                onSend={
+                  handleSendMessage
+                }
+              />
+            </section>
 
-          <section className="grid items-stretch gap-4 lg:grid-cols-1">
-            <FileUpload
-              file={file}
-              tableName={
-                tableName
-              }
-              uploading={
-                uploading
-              }
-              isDragging={
-                isDragging
-              }
-              onFileChange={
-                handleFileChange
-              }
-              onDragOver={
-                handleDragOver
-              }
-              onDragLeave={
-                handleDragLeave
-              }
-              onDrop={
-                handleDrop
-              }
-            />
-          </section>
+            <section className="min-h-0">
+              <FileUpload
+                file={file}
+                tableName={
+                  tableName
+                }
+                uploading={
+                  uploading
+                }
+                isDragging={
+                  isDragging
+                }
+                onFileChange={
+                  handleFileChange
+                }
+                onDragOver={
+                  handleDragOver
+                }
+                onDragLeave={
+                  handleDragLeave
+                }
+                onDrop={
+                  handleDrop
+                }
+              />
+            </section>
+          </div>
 
           <ResultsDisplay
             query={query}

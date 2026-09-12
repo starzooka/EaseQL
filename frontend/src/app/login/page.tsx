@@ -1,9 +1,9 @@
 "use client";
 
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FormEvent, useEffect, useState } from "react";
 
+import AuthLayout from "@/components/auth/AuthLayout";
 import { useAuth } from "@/components/auth/useAuth";
 
 export default function LoginPage() {
@@ -37,57 +37,45 @@ export default function LoginPage() {
   };
 
   return (
-    <main className="min-h-screen bg-[var(--ink)] text-[var(--paper)] antialiased">
-      <div className="mx-auto flex min-h-screen w-full max-w-md items-center px-5 py-12">
-        <section className="w-full rounded-2xl border border-[var(--line-strong)]/60 bg-[var(--ink)] p-7 shadow-none backdrop-blur">
-          <p className="mb-2 text-xs uppercase tracking-[0.18em] text-[var(--amber)]">EaseQL Access</p>
-          <h1 className="mb-1 text-3xl font-semibold tracking-tight text-[var(--paper)]">Welcome Back</h1>
-          <p className="mb-6 text-sm text-[var(--muted)]">Sign in to continue querying your datasets.</p>
+    <AuthLayout
+      eyebrow="Your data, at a glance"
+      title="Welcome back"
+      description="Query datasets in natural language and pick up where you left off."
+      footerPrompt="No account yet?"
+      footerLinkLabel="Create your account"
+      footerHref="/register"
+    >
+      <form onSubmit={onSubmit} className="auth-form">
+        <label className="auth-field">
+          <span>Email</span>
+          <input
+            type="email"
+            value={email}
+            onChange={(event) => setEmail(event.target.value)}
+            className="auth-input"
+            placeholder="you@example.com"
+            required
+          />
+        </label>
 
-          <form onSubmit={onSubmit} className="space-y-4">
-            <label className="block text-sm text-[var(--paper)]">
-              Email
-              <input
-                type="email"
-                value={email}
-                onChange={(event) => setEmail(event.target.value)}
-                className="mt-1.5 w-full rounded-xl border border-[var(--line-strong)] bg-[var(--ink)] px-3 py-2.5 text-[var(--paper)] outline-none ring-0 transition focus:border-[var(--amber)]"
-                placeholder="you@example.com"
-                required
-              />
-            </label>
+        <label className="auth-field">
+          <span>Password</span>
+          <input
+            type="password"
+            value={password}
+            onChange={(event) => setPassword(event.target.value)}
+            className="auth-input"
+            placeholder="Enter your password"
+            required
+          />
+        </label>
 
-            <label className="block text-sm text-[var(--paper)]">
-              Password
-              <input
-                type="password"
-                value={password}
-                onChange={(event) => setPassword(event.target.value)}
-                className="mt-1.5 w-full rounded-xl border border-[var(--line-strong)] bg-[var(--ink)] px-3 py-2.5 text-[var(--paper)] outline-none ring-0 transition focus:border-[var(--amber)]"
-                placeholder="••••••••"
-                required
-              />
-            </label>
+        {error ? <p className="auth-error" role="alert">{error}</p> : null}
 
-            {error ? <p className="text-sm text-[var(--danger)]">{error}</p> : null}
-
-            <button
-              type="submit"
-              disabled={submitting}
-              className="w-full rounded-xl bg-[var(--amber)] px-4 py-2.5 text-sm font-medium text-[var(--paper)] transition hover:bg-[#f0b04f] disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              {submitting ? "Signing in..." : "Sign In"}
-            </button>
-          </form>
-
-          <p className="mt-5 text-sm text-[var(--muted)]">
-            No account yet?{" "}
-            <Link href="/register" className="text-[var(--amber)] hover:text-[var(--amber)]">
-              Create one
-            </Link>
-          </p>
-        </section>
-      </div>
-    </main>
+        <button type="submit" disabled={submitting} className="auth-submit">
+          {submitting ? "Signing in..." : "Sign In"}
+        </button>
+      </form>
+    </AuthLayout>
   );
 }

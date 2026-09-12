@@ -1,7 +1,5 @@
 "use client";
 
-import { useRouter } from "next/navigation";
-
 import { useAuth } from "@/components/auth/useAuth";
 
 interface HeaderProps {
@@ -15,13 +13,7 @@ export default function Header({
   sessionTitle,
   datasetLabel,
 }: HeaderProps) {
-  const router = useRouter();
-  const { logout, isAuthenticated } = useAuth();
-
-  const handleSignOut = () => {
-    logout();
-    router.push("/login");
-  };
+  const { isAuthenticated } = useAuth();
 
   return (
     <header className="border-b border-[var(--line)] pb-4">
@@ -67,14 +59,6 @@ export default function Header({
                 className="border border-[var(--line-strong)] bg-transparent px-3 py-2 text-xs font-medium text-[var(--paper)] transition-colors hover:border-[var(--amber)] hover:text-[var(--amber)] focus:outline-none focus-visible:ring-1 focus-visible:ring-[var(--amber)]"
               >
                 Preferences
-              </button>
-
-              <button
-                type="button"
-                onClick={handleSignOut}
-                className="border border-[var(--line-strong)] bg-transparent px-3 py-2 text-xs font-medium text-[var(--muted)] transition-colors hover:border-[var(--amber)] hover:text-[var(--amber)] focus:outline-none focus-visible:ring-1 focus-visible:ring-[var(--amber)]"
-              >
-                Sign Out
               </button>
             </div>
           ) : null}

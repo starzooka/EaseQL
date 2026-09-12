@@ -1,9 +1,9 @@
 "use client";
 
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FormEvent, useEffect, useState } from "react";
 
+import AuthLayout from "@/components/auth/AuthLayout";
 import { useAuth } from "@/components/auth/useAuth";
 
 export default function RegisterPage() {
@@ -49,69 +49,57 @@ export default function RegisterPage() {
   };
 
   return (
-    <main className="min-h-screen bg-[#0a0f1b] text-slate-200 antialiased">
-      <div className="mx-auto flex min-h-screen w-full max-w-md items-center px-5 py-12">
-        <section className="w-full rounded-2xl border border-slate-700/60 bg-slate-900/80 p-7 shadow-[0_0_0_1px_rgba(59,130,246,0.16),0_18px_60px_-26px_rgba(59,130,246,0.65)] backdrop-blur">
-          <p className="mb-2 text-xs uppercase tracking-[0.18em] text-blue-300">EaseQL Access</p>
-          <h1 className="mb-1 text-3xl font-semibold tracking-tight text-slate-100">Create Account</h1>
-          <p className="mb-6 text-sm text-slate-400">Get started with secure querying and saved sessions.</p>
+    <AuthLayout
+      eyebrow="A clearer way to explore"
+      title="Create your account"
+      description="Ask natural-language questions, save useful sessions, and understand your data faster."
+      footerPrompt="Already registered?"
+      footerLinkLabel="Sign in"
+      footerHref="/login"
+    >
+      <form onSubmit={onSubmit} className="auth-form">
+        <label className="auth-field">
+          <span>Email</span>
+          <input
+            type="email"
+            value={email}
+            onChange={(event) => setEmail(event.target.value)}
+            className="auth-input"
+            placeholder="you@example.com"
+            required
+          />
+        </label>
 
-          <form onSubmit={onSubmit} className="space-y-4">
-            <label className="block text-sm text-slate-300">
-              Email
-              <input
-                type="email"
-                value={email}
-                onChange={(event) => setEmail(event.target.value)}
-                className="mt-1.5 w-full rounded-xl border border-slate-600 bg-slate-950/80 px-3 py-2.5 text-slate-100 outline-none ring-0 transition focus:border-blue-400"
-                placeholder="you@example.com"
-                required
-              />
-            </label>
+        <label className="auth-field">
+          <span>Password</span>
+          <input
+            type="password"
+            value={password}
+            onChange={(event) => setPassword(event.target.value)}
+            className="auth-input"
+            placeholder="At least 8 characters"
+            required
+          />
+        </label>
 
-            <label className="block text-sm text-slate-300">
-              Password
-              <input
-                type="password"
-                value={password}
-                onChange={(event) => setPassword(event.target.value)}
-                className="mt-1.5 w-full rounded-xl border border-slate-600 bg-slate-950/80 px-3 py-2.5 text-slate-100 outline-none ring-0 transition focus:border-blue-400"
-                placeholder="At least 8 characters"
-                required
-              />
-            </label>
+        <label className="auth-field">
+          <span>Confirm password</span>
+          <input
+            type="password"
+            value={confirmPassword}
+            onChange={(event) => setConfirmPassword(event.target.value)}
+            className="auth-input"
+            placeholder="Repeat your password"
+            required
+          />
+        </label>
 
-            <label className="block text-sm text-slate-300">
-              Confirm Password
-              <input
-                type="password"
-                value={confirmPassword}
-                onChange={(event) => setConfirmPassword(event.target.value)}
-                className="mt-1.5 w-full rounded-xl border border-slate-600 bg-slate-950/80 px-3 py-2.5 text-slate-100 outline-none ring-0 transition focus:border-blue-400"
-                placeholder="Repeat your password"
-                required
-              />
-            </label>
+        {error ? <p className="auth-error" role="alert">{error}</p> : null}
 
-            {error ? <p className="text-sm text-rose-300">{error}</p> : null}
-
-            <button
-              type="submit"
-              disabled={submitting}
-              className="w-full rounded-xl bg-blue-500 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-blue-400 disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              {submitting ? "Creating account..." : "Create Account"}
-            </button>
-          </form>
-
-          <p className="mt-5 text-sm text-slate-400">
-            Already registered?{" "}
-            <Link href="/login" className="text-blue-300 hover:text-blue-200">
-              Sign in
-            </Link>
-          </p>
-        </section>
-      </div>
-    </main>
+        <button type="submit" disabled={submitting} className="auth-submit">
+          {submitting ? "Creating account..." : "Create Account"}
+        </button>
+      </form>
+    </AuthLayout>
   );
 }
