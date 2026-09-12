@@ -1,7 +1,7 @@
 import asyncio
 from unittest.mock import patch
 
-import app.main as main
+from app.services import sql_service
 
 
 class FakeResponse:
@@ -14,7 +14,7 @@ class FakeResponse:
 
 class FakeClient:
     def __init__(self, timeout):
-        assert timeout == 60
+        assert timeout == 180
 
     async def __aenter__(self):
         return self
@@ -23,22 +23,21 @@ class FakeClient:
         pass
 
     async def post(self, url, json):
-        assert url == main.OLLAMA_CHAT_URL
+        assert url == sql_service.OLLAMA_CHAT_URL
         assert json["messages"][0]["role"] == "system"
+        assert "safe, valid SQL" in json["messages"][0]["content"]
         assert "TABLE" in json["messages"][1]["content"]
         assert "largest amount" in json["messages"][1]["content"]
         return FakeResponse()
 
 
-with patch("app.main.httpx.AsyncClient", FakeClient):
-    result = asyncio.run(
-        main.generate_sql(
-            main.SQLRequest(
+def test_generate_sql_cleans_ollama_response():
+    with patch("app.services.sql_service.httpx.AsyncClient", FakeClient):
+        result = asyncio.run(
+            sql_service.generate_sql(
                 schema_text='TABLE "uploaded_data" ("amount" DOUBLE);',
                 question="Show the largest amount.",
             )
         )
-    )
 
-assert result["sql"] == "SELECT COUNT(*) FROM uploaded_data;"
-print("Ollama SQL endpoint checks passed")
+    assert result == "SELECT COUNT(*) FROM uploaded_data;"
