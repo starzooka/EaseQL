@@ -10,6 +10,9 @@ jobs:
   backend-tests:
     runs-on: ubuntu-latest
 
+    env:
+      JWT_SECRET_KEY: test-secret-key-for-ci
+
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
@@ -17,9 +20,8 @@ jobs:
       - name: Set up Python 3.12
         uses: actions/setup-python@v5
         with:
-          python-version: '3.12'
-          # Enable pip caching and key it from backend dependencies for faster reruns.
-          cache: 'pip'
+          python-version: "3.12"
+          cache: "pip"
           cache-dependency-path: backend/requirements.txt
 
       - name: Install backend dependencies
@@ -27,6 +29,7 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r backend/requirements.txt
 
+<<<<<<< HEAD
       - name: Ensure pytest is installed
         run: |
           # Install pytest only when it is not declared in backend requirements.
@@ -48,3 +51,7 @@ jobs:
         env:
           JWT_SECRET_KEY: test-only-secret-for-ci
         run: pytest backend/tests/
+=======
+      - name: Run backend test suite
+        run: pytest backend/tests/
+>>>>>>> d73bd6bab1cb33525daa998f2d61a36f6880df6b

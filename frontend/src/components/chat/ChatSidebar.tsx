@@ -34,6 +34,7 @@ export default function ChatSidebar({
 }: ChatSidebarProps) {
   const router = useRouter();
   const { logout, userEmail } = useAuth();
+
   const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
@@ -41,6 +42,7 @@ export default function ChatSidebar({
     useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [profileOpen, setProfileOpen] = useState(false);
+
   const profileRef = useRef<HTMLDivElement>(null);
 
   const loadSessions = useCallback(async () => {
@@ -60,7 +62,7 @@ export default function ChatSidebar({
       setError(
         loadError instanceof Error
           ? loadError.message
-          : "Could not load chats."
+          : "Could not load chats.",
       );
     } finally {
       setLoading(false);
@@ -68,7 +70,11 @@ export default function ChatSidebar({
   }, [isAuthenticated]);
 
   useEffect(() => {
-    void loadSessions();
+    const initializeSessions = async () => {
+      await loadSessions();
+    };
+
+    void initializeSessions();
   }, [loadSessions, refreshKey]);
 
   const handleCreate = async () => {
@@ -86,7 +92,7 @@ export default function ChatSidebar({
       setError(
         createError instanceof Error
           ? createError.message
-          : "Could not create a chat."
+          : "Could not create a chat.",
       );
     } finally {
       setCreating(false);
@@ -102,9 +108,7 @@ export default function ChatSidebar({
       await deleteChatSession(sessionId);
 
       setSessions((current) =>
-        current.filter(
-          (session) => session.id !== sessionId
-        )
+        current.filter((session) => session.id !== sessionId),
       );
 
       if (selectedSessionId === sessionId) {
@@ -114,7 +118,7 @@ export default function ChatSidebar({
       setError(
         deleteError instanceof Error
           ? deleteError.message
-          : "Could not delete the chat."
+          : "Could not delete the chat.",
       );
     } finally {
       setDeletingSessionId(null);
@@ -241,7 +245,7 @@ export default function ChatSidebar({
           <div className="easeql-empty-history">
             No chats yet.
             <br />
-            Start one when you're ready.
+            Start one when you&apos;re ready.
           </div>
         ) : (
           <ul aria-label="Chat sessions">
@@ -249,17 +253,11 @@ export default function ChatSidebar({
               <ChatSessionItem
                 key={session.id}
                 session={session}
-                selected={
-                  selectedSessionId === session.id
-                }
+                selected={selectedSessionId === session.id}
                 collapsed={collapsed}
-                deleting={
-                  deletingSessionId === session.id
-                }
+                deleting={deletingSessionId === session.id}
                 onSelect={onSelectSession}
-                onDelete={(id) =>
-                  void handleDelete(id)
-                }
+                onDelete={(id) => void handleDelete(id)}
               />
             ))}
           </ul>
@@ -275,9 +273,14 @@ export default function ChatSidebar({
         {profileOpen ? (
           <div className="easeql-profile-menu" role="menu">
             <p className="easeql-profile-label">Signed in as</p>
-            <p className="easeql-profile-email" title={userEmail ?? undefined}>
+
+            <p
+              className="easeql-profile-email"
+              title={userEmail ?? undefined}
+            >
               {userEmail ?? "Authenticated user"}
             </p>
+
             <button
               type="button"
               role="menuitem"
@@ -297,14 +300,27 @@ export default function ChatSidebar({
           aria-label="Open profile menu"
           onClick={() => setProfileOpen((current) => !current)}
         >
-          <span className="easeql-profile-avatar" aria-hidden="true">
+          <span
+            className="easeql-profile-avatar"
+            aria-hidden="true"
+          >
             {userEmail?.slice(0, 1).toUpperCase() ?? "U"}
           </span>
+
           <span className="easeql-profile-details">
-            <span className="easeql-profile-name">{userEmail ?? "Account"}</span>
-            <span className="easeql-profile-caption">Profile</span>
+            <span className="easeql-profile-name">
+              {userEmail ?? "Account"}
+            </span>
+
+            <span className="easeql-profile-caption">
+              Profile
+            </span>
           </span>
-          <span className="easeql-profile-chevron" aria-hidden="true">
+
+          <span
+            className="easeql-profile-chevron"
+            aria-hidden="true"
+          >
             {profileOpen ? "⌃" : "⌄"}
           </span>
         </button>
