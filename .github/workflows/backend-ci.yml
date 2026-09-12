@@ -44,6 +44,7 @@ jobs:
           PY
           if [ $? -ne 0 ]; then pip install pytest; fi
 
-      - name: Run backend test suite
-        # Run backend tests as the CI quality gate from the repository root.
+      - name: Run tests
+        env:
+          JWT_SECRET_KEY: test-only-secret-for-ci
         run: pytest backend/tests/
