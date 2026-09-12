@@ -7,7 +7,10 @@ import {
   useRef,
   useState,
 } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
+
+import styles from "./page.module.css";
 
 import FileUpload from "../components/FileUpload";
 import Footer from "../components/Footer";
@@ -158,6 +161,112 @@ Getting started:
   created_at: new Date().toISOString(),
 };
 
+function LandingPage() {
+  return (
+    <main className={styles.landing}>
+      <header className={styles.header}>
+        <Link href="/" className={styles.brand} aria-label="EaseQL home">
+          <span className={styles.brandMark} aria-hidden="true" />
+          EaseQL
+        </Link>
+        <nav className={styles.nav} aria-label="Main navigation">
+          <a href="#how-it-works">How it works</a>
+          <a href="#features">Features</a>
+          <a href="#privacy">Privacy</a>
+          <Link href="/login" className={styles.navAction}>Sign in</Link>
+        </nav>
+      </header>
+
+      <section className={`${styles.hero} ${styles.contentWidth}`}>
+        <div className={styles.heroCopy}>
+          <h1>Ask your<br />spreadsheet a<br />question.</h1>
+          <p>Upload a CSV, type what you want to know in plain English, and EaseQL writes the SQL, runs it against your data, and hands back the answer - no query language required.</p>
+          <div className={styles.actions}>
+            <Link href="/register" className={styles.primaryButton}>Get started free</Link>
+            <a href="#how-it-works" className={styles.secondaryButton}>See how it works</a>
+          </div>
+        </div>
+
+        <div className={styles.preview} aria-label="Example EaseQL query result">
+          <div className={styles.previewLabel}>EASEQL - SALES_IMPORT.CSV</div>
+          <div className={styles.question}>which region had the biggest drop in sales last quarter?</div>
+          <div className={styles.sqlPanel}>
+            <div className={styles.sqlLabel}>GENERATED SQL</div>
+            <code>SELECT region,<br />&nbsp;&nbsp;&nbsp;&nbsp;SUM(revenue) AS q_revenue<br />FROM sales_import<br />WHERE quarter = &apos;2025-Q2&apos;<br />GROUP BY region<br />ORDER BY q_revenue ASC<br />LIMIT 3;</code>
+            <div className={styles.resultHeader}><span>REGION</span><span>Q REVENUE</span></div>
+            <div className={styles.resultRow}><strong>Midwest</strong><strong>$142,300</strong></div>
+            <div className={styles.resultRow}><strong>Southeast</strong><strong>$168,900</strong></div>
+            <div className={styles.resultRow}><strong>Northeast</strong><strong>$201,450</strong></div>
+            <p className={styles.resultNote}>Midwest revenue fell 19% quarter over quarter - the steepest drop of any region.</p>
+          </div>
+        </div>
+      </section>
+
+      <section id="features" className={styles.featureStrip}>
+        <div className={styles.contentWidthSmall}>
+          <div className={styles.featureGrid}>
+            <div><span>RUNS ON YOUR MACHINE</span><p>The language model and the database both run locally. Nothing about your data has to touch a server you don&apos;t control.</p></div>
+            <div><span>BUILT ON DUCKDB</span><p>Your upload becomes a real, queryable table. Fast enough for spreadsheets with millions of rows.</p></div>
+            <div><span>OPEN SOURCE</span><p>The frontend, backend, and prompts are all inspectable. Nothing about how it answers is hidden from you.</p></div>
+          </div>
+        </div>
+      </section>
+
+      <section id="how-it-works" className={`${styles.section} ${styles.contentWidthSmall}`}>
+        <h2>From CSV to answer, in three steps.</h2>
+        <p className={styles.sectionIntro}>No schema design, no joins to write by hand - EaseQL figures out the shape of your data and asks you nothing but the question.</p>
+        <div className={styles.steps}>
+          <div><span>01</span><h3>Upload</h3><p>Drop in a CSV. EaseQL profiles the columns, infers types, and loads it into a private DuckDB table under your account.</p></div>
+          <div><span>02</span><h3>Ask</h3><p>Type your question the way you&apos;d ask a coworker - &quot;what were our best sellers in March?&quot; No syntax to remember.</p></div>
+          <div><span>03</span><h3>Get answers</h3><p>See the generated SQL alongside the result table, then save it, revisit it, or ask a follow-up in the same thread.</p></div>
+        </div>
+      </section>
+
+      <section className={`${styles.section} ${styles.memorySection} ${styles.contentWidthSmall}`}>
+        <h2>It remembers the conversation, not<br />just the query.</h2>
+        <p className={styles.sectionIntro}>EaseQL is built around threads, not one-off lookups - so context you&apos;ve already given it carries forward.</p>
+        <div className={styles.memoryRows}>
+          <div><h3><i className={styles.amberMarker} />Session history</h3><p>Every conversation is saved on its own thread, so you can pick up where you left off last week without re-explaining your data.</p></div>
+          <div><h3><i className={styles.tealMarker} />Memory</h3><p>Tell EaseQL a preference once - &quot;always show revenue in thousands&quot; - and it applies that context to future questions automatically.</p></div>
+          <div><h3><i className={styles.amberMarker} />Saved results</h3><p>Pin an answer you&apos;ll need again. It sits alongside your chat history, one click away instead of a query you have to re-run.</p></div>
+          <div><h3><i className={styles.tealMarker} />Private accounts</h3><p>Sign in and your uploads, threads, and saved results are scoped to you - nobody else on the deployment can see them.</p></div>
+        </div>
+      </section>
+
+      <section id="privacy" className={styles.privacySection}>
+        <div className={styles.privacyCopy}>
+          <h2>Your data doesn&apos;t need to leave the room to<br />be understood.</h2>
+          <p>EaseQL pairs a local language model with a local database, so the round trip from question to answer never has to leave your machine. It&apos;s the same reason a lot of teams can&apos;t use a cloud analytics tool on their real numbers in the first place - this one was built to not need them at all.</p>
+        </div>
+      </section>
+
+      <section className={`${styles.ctaSection} ${styles.contentWidthSmall}`}>
+  <h2>Start asking questions.</h2>
+
+  <div className={styles.actions}>
+    <Link href="/register" className={styles.primaryButton}>
+      Create an account
+    </Link>
+
+    <a
+      href="https://github.com/starzooka/EaseQL"
+      className={styles.secondaryButton}
+    >
+      Read the docs
+    </a>
+  </div>
+
+  <p>Free. Open source. Runs on your laptop.</p>
+</section>
+
+      <footer className={`${styles.footer} ${styles.contentWidthSmall}`}>
+        <span>EaseQL / natural language analytics</span>
+        <span>Local and private</span>
+      </footer>
+    </main>
+  );
+}
+
 export default function Home() {
   const router = useRouter();
 
@@ -263,22 +372,6 @@ export default function Home() {
 
   const activeSessionIdRef =
     useRef<number | null>(null);
-
-  /*
-   * Redirect unauthenticated users to login.
-   */
-  useEffect(() => {
-    if (
-      !loading &&
-      !isAuthenticated
-    ) {
-      router.replace("/login");
-    }
-  }, [
-    isAuthenticated,
-    loading,
-    router,
-  ]);
 
   /*
    * Initialize the active chat session.
@@ -479,10 +572,7 @@ export default function Home() {
   /*
    * Authentication loading state.
    */
-  if (
-    loading ||
-    !isAuthenticated
-  ) {
+  if (loading) {
     return (
       <main className="min-h-screen bg-[var(--ink)] font-sans text-[var(--paper)] antialiased">
         <div className="mx-auto flex min-h-screen max-w-7xl items-center justify-center px-4 sm:px-8 lg:px-10">
@@ -492,6 +582,10 @@ export default function Home() {
         </div>
       </main>
     );
+  }
+
+  if (!isAuthenticated) {
+    return <LandingPage />;
   }
 
   const handleUnauthorized =
