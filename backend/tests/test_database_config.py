@@ -7,6 +7,7 @@ import pytest
 def test_missing_database_url_fails_lazily(monkeypatch):
     monkeypatch.delenv("DATABASE_URL", raising=False)
     database = importlib.reload(importlib.import_module("app.database"))
+    monkeypatch.setattr(database, "SessionLocal", None)
 
     assert database.SessionLocal is None
 

@@ -28,9 +28,15 @@ export type AuthContextValue = {
 };
 
 export const AuthContext = createContext<AuthContextValue | null>(null);
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
-export default function AuthProvider({ children }: { children: ReactNode }) {
+const API_URL =
+  process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+
+export default function AuthProvider({
+  children,
+}: {
+  children: ReactNode;
+}) {
   const [token, setToken] = useState<string | null>(null);
   const [userEmail, setUserEmail] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -50,7 +56,10 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
         return;
       }
 
-      const data = (await response.json()) as Partial<AuthResponse> & { detail?: string };
+      const data = (await response.json()) as Partial<AuthResponse> & {
+        detail?: string;
+      };
+
       setToken(data.access_token ?? null);
       setUserEmail(data.email ?? userEmail ?? null);
     } catch {
@@ -62,7 +71,11 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
   }, [userEmail]);
 
   useEffect(() => {
-    void refreshSession();
+    const initializeSession = async () => {
+      await refreshSession();
+    };
+
+    void initializeSession();
   }, [refreshSession]);
 
   const login = useCallback(async (email: string, password: string) => {
@@ -79,7 +92,10 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
       body,
     });
 
-    const data = (await response.json()) as Partial<AuthResponse> & { detail?: string };
+    const data = (await response.json()) as Partial<AuthResponse> & {
+      detail?: string;
+    };
+
     if (!response.ok) {
       throw new Error(data.detail ?? "Login failed.");
     }
@@ -96,10 +112,16 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ email: email.trim().toLowerCase(), password }),
+      body: JSON.stringify({
+        email: email.trim().toLowerCase(),
+        password,
+      }),
     });
 
-    const data = (await response.json()) as Partial<AuthResponse> & { detail?: string };
+    const data = (await response.json()) as Partial<AuthResponse> & {
+      detail?: string;
+    };
+
     if (!response.ok) {
       throw new Error(data.detail ?? "Registration failed.");
     }
@@ -137,5 +159,9 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
     [loading, login, logout, register, token, userEmail],
   );
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+  return (
+    <AuthContext.Provider value={value}>
+      {children}
+    </AuthContext.Provider>
+  );
 }
