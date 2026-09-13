@@ -47,6 +47,10 @@ class FakeSession:
     async def commit(self):
         pass
 
+    async def flush(self):
+        if self.history is not None:
+            self.history.id = 1
+
     async def refresh(self, entity):
         if isinstance(entity, Dataset):
             entity.id = 1

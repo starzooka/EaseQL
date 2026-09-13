@@ -6,8 +6,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from ..auth import ALGORITHM, COOKIE_NAME, SECRET_KEY, authenticate_user, create_access_token, get_password_hash, get_user_by_email
 from ..database import get_db
 from ..models import User
+from ..password_validation import validate_password
 from ..services.rate_limit import AUTH_RATE_LIMIT
 from jose import jwt
+
+from ..password_validation import validate_password
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 COOKIE_MAX_AGE_SECONDS = 60 * 60
@@ -61,6 +64,16 @@ async def register(
     email = payload.email.strip().lower()
     if not email:
         raise HTTPException(status_code=400, detail="Email is required")
+    password_validation = validate_password(payload.password)
+
+    if not password_validation.strong:
+        raise HTTPException(
+            status_code=400,
+            detail=(
+             "Password must be Strong: 8–15 characters and contain at least "
+            "one uppercase, one lowercase, one numeric, and one special character."
+        ),
+    )
     if await get_user_by_email(db, email):
         raise HTTPException(status_code=400, detail="Email already registered")
 
