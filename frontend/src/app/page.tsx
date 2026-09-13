@@ -12,7 +12,9 @@ import { useRouter } from "next/navigation";
 
 import styles from "./page.module.css";
 
-import FileUpload from "../components/FileUpload";
+import FileUpload, {
+  type DatasetUpload,
+} from "../components/FileUpload";
 import Footer from "../components/Footer";
 import Header from "../components/Header";
 import ResultsDisplay, {
@@ -276,8 +278,8 @@ export default function Home() {
     logout,
   } = useAuth();
 
-  const [file, setFile] =
-    useState<File | null>(null);
+  const [datasets, setDatasets] =
+    useState<DatasetUpload[]>([]);
 
   const [tableName, setTableName] =
     useState("");
@@ -378,6 +380,9 @@ export default function Home() {
 
   const activeSessionIdRef =
     useRef<number | null>(null);
+
+  const uploadSequenceRef =
+    useRef(0);
 
   /*
    * Initialize the active chat session.
@@ -517,7 +522,26 @@ export default function Home() {
               ""
           );
 
-          setFile(null);
+          setDatasets(
+            session.dataset_id &&
+              session.dataset_table_name
+              ? [
+                  {
+                    id: `session-${session.id}`,
+                    file: null,
+                    datasetId:
+                      session.dataset_id,
+                    filename:
+                      "Existing dataset",
+                    tableName:
+                      session.dataset_table_name,
+                    rowCount: null,
+                    status: "success",
+                    error: null,
+                  },
+                ]
+              : []
+          );
 
           /*
            * Show the welcome message only
@@ -625,7 +649,7 @@ export default function Home() {
      */
     setDatasetId(null);
     setTableName("");
-    setFile(null);
+    setDatasets([]);
 
     setSessionError("");
     setSessionDataError("");
@@ -935,8 +959,13 @@ export default function Home() {
    */
   const uploadFile =
     async (
-      selectedFile: File
+      selectedFile: File,
+      existingDatasetId?: string
     ) => {
+      if (uploading && !existingDatasetId) {
+        return;
+      }
+
       if (
         !selectedFile.name
           .toLowerCase()
@@ -949,9 +978,42 @@ export default function Home() {
         return;
       }
 
-      setFile(
-        selectedFile
-      );
+      const uploadId =
+        existingDatasetId ??
+        `upload-${++uploadSequenceRef.current}`;
+
+      if (existingDatasetId) {
+        setDatasets(
+          (currentDatasets) =>
+            currentDatasets.map(
+              (dataset) =>
+                dataset.id === uploadId
+                  ? {
+                      ...dataset,
+                      file: selectedFile,
+                      status: "uploading",
+                      error: null,
+                    }
+                  : dataset
+            )
+        );
+      } else {
+        setDatasets(
+          (currentDatasets) => [
+            ...currentDatasets,
+            {
+              id: uploadId,
+              file: selectedFile,
+              datasetId: null,
+              filename: selectedFile.name,
+              tableName: null,
+              rowCount: null,
+              status: "uploading",
+              error: null,
+            },
+          ]
+        );
+      }
 
       setError("");
 
@@ -992,7 +1054,9 @@ export default function Home() {
           401
         ) {
           handleUnauthorized();
-          return;
+          throw new Error(
+            "Authentication required."
+          );
         }
 
         const data =
@@ -1015,6 +1079,26 @@ export default function Home() {
           data.dataset_id
         );
 
+        setDatasets(
+          (currentDatasets) =>
+            currentDatasets.map(
+              (dataset) =>
+                dataset.id === uploadId
+                  ? {
+                      ...dataset,
+                      datasetId:
+                        data.dataset_id,
+                      tableName:
+                        data.table,
+                      rowCount:
+                        data.row_count,
+                      status: "success",
+                      error: null,
+                    }
+                  : dataset
+            )
+        );
+
         /*
          * Remove only the local
          * welcome/onboarding message.
@@ -1029,13 +1113,28 @@ export default function Home() {
       } catch (
         uploadError
       ) {
-        setError(
+        const uploadMessage =
           uploadError instanceof Error
             ? uploadError.message
-            : "Upload failed."
+            : "Upload failed.";
+
+        setError(
+          uploadMessage
         );
 
-        setFile(null);
+        setDatasets(
+          (currentDatasets) =>
+            currentDatasets.map(
+              (dataset) =>
+                dataset.id === uploadId
+                  ? {
+                      ...dataset,
+                      status: "error",
+                      error: uploadMessage,
+                    }
+                  : dataset
+            )
+        );
       } finally {
         setUploading(false);
       }
@@ -1053,6 +1152,8 @@ export default function Home() {
           selectedFile
         );
       }
+
+      event.target.value = "";
     };
 
   const handleDragOver =
@@ -1076,6 +1177,10 @@ export default function Home() {
 
       setIsDragging(false);
 
+      if (uploading) {
+        return;
+      }
+
       const droppedFile =
         event.dataTransfer
           .files[0];
@@ -1083,6 +1188,21 @@ export default function Home() {
       if (droppedFile) {
         void uploadFile(
           droppedFile
+        );
+      }
+    };
+
+  const retryUpload =
+    (datasetId: string) => {
+      const dataset =
+        datasets.find(
+          (item) => item.id === datasetId
+        );
+
+      if (dataset?.file) {
+        void uploadFile(
+          dataset.file,
+          dataset.id
         );
       }
     };
@@ -1293,10 +1413,7 @@ export default function Home() {
 
             <section className="min-h-0">
               <FileUpload
-                file={file}
-                tableName={
-                  tableName
-                }
+                datasets={datasets}
                 uploading={
                   uploading
                 }
@@ -1314,6 +1431,9 @@ export default function Home() {
                 }
                 onDrop={
                   handleDrop
+                }
+                onRetry={
+                  retryUpload
                 }
               />
             </section>

@@ -1,6 +1,6 @@
 from enum import Enum
 
-from sqlalchemy import DateTime, Enum as SQLEnum, ForeignKey, Integer, String, Text, func
+from sqlalchemy import DateTime, Enum as SQLEnum, ForeignKey, Integer, String, Text, UniqueConstraint, func
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
@@ -48,11 +48,13 @@ class User(Base):
 
 class Dataset(Base):
     __tablename__ = "datasets"
+    __table_args__ = (UniqueConstraint("table_name", name="uq_datasets_table_name"),)
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
     table_name: Mapped[str] = mapped_column(String(255), nullable=False)
     original_filename: Mapped[str] = mapped_column(String(255), nullable=False)
+    columns: Mapped[list[dict[str, str]]] = mapped_column(JSONB, nullable=False, default=list)
     created_at: Mapped[DateTime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
 
     user: Mapped["User"] = relationship("User", back_populates="datasets")

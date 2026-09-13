@@ -12,5 +12,7 @@ def test_text_to_sql_prompt_contains_schema_rules():
 	prompt_text = Path(__file__).resolve().parents[2] / "local-llm" / "prompts" / "text-to-sql.txt"
 	content = prompt_text.read_text(encoding="utf-8")
 	assert "CRITICAL SQL SYNTAX RULE" in content
+	assert "multiple relevant datasets" in content
+	assert "INNER JOIN or LEFT JOIN" in content
 	assert "Subscription Date" in content
 	assert '"Subscription Date"' in content

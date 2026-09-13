@@ -35,7 +35,7 @@ class FakeSession:
     async def execute(self, statement):
         self.execute_count += 1
         if self.execute_count == 1:
-            return FakeResult(self.dataset)
+            return FakeResult(self.dataset, [self.dataset])
         return FakeResult(rows=[])
 
     def add(self, entity):
@@ -120,6 +120,7 @@ def test_authenticated_upload_query_flow(tmp_path, monkeypatch):
         assert upload["dataset_id"] == 1
         assert re.fullmatch(r"user_7_[0-9a-f]{32}", upload["table"])
         assert upload["row_count"] == 8
+        assert {column["name"] for column in session.dataset.columns} == {"region", "sale_date", "sales"}
 
         with patch("app.services.sql_service.httpx.AsyncClient", FakeOllamaClient):
             query_response = client.post(
