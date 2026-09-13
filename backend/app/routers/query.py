@@ -247,6 +247,7 @@ async def api_query(
             execution_time_ms=execution_time_ms,
         )
         db.add(history)
+        await db.flush()
         if session is not None:
             db.add_all(
                 [
@@ -260,7 +261,10 @@ async def api_query(
                         session_id=session.id,
                         user_id=current_user.id,
                         role=ChatMessageRole.ASSISTANT,
-                        content=f"Query completed successfully. {execution_result['row_count']} rows returned.",
+                        content=(
+                            f"Query completed successfully. {execution_result['row_count']} rows returned.\n\n"
+                            f"[[QUERY_HISTORY_ID:{history.id}]]"
+                        ),
                     ),
                 ]
             )

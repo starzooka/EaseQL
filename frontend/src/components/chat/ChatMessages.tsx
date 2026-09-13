@@ -8,6 +8,7 @@ interface ChatMessagesProps {
   loading: boolean;
   thinking: boolean;
   error: string;
+  onViewQuery: (historyId: number) => void;
 }
 
 function sortChronologically(
@@ -30,6 +31,7 @@ export default function ChatMessages({
   loading,
   thinking,
   error,
+  onViewQuery,
 }: ChatMessagesProps) {
   const orderedMessages =
     sortChronologically(messages);
@@ -102,6 +104,7 @@ export default function ChatMessages({
                 <ChatMessage
                   key={message.id}
                   message={message}
+                  onViewQuery={onViewQuery}
                 />
               )
             )}

@@ -342,6 +342,12 @@ export default function Home() {
   const [savedQueries, setSavedQueries] =
     useState<SavedQueryResult[]>([]);
 
+  const [queryHistoryRequest, setQueryHistoryRequest] =
+    useState<{ queryId: number | null; key: number }>({
+      queryId: null,
+      key: 0,
+    });
+
   const [messageSending, setMessageSending] =
     useState(false);
 
@@ -648,6 +654,14 @@ export default function Home() {
 
     setSessionMessages([]);
     setSavedQueries([]);
+    setQueryHistoryRequest({ queryId: null, key: 0 });
+  };
+
+  const handleViewQuery = (historyId: number) => {
+    setQueryHistoryRequest((current) => ({
+      queryId: historyId,
+      key: current.key + 1,
+    }));
   };
 
   /*
@@ -1253,6 +1267,9 @@ export default function Home() {
                 error={
                   sessionDataError
                 }
+                onViewQuery={
+                  handleViewQuery
+                }
               />
 
               <ChatInput
@@ -1345,6 +1362,12 @@ export default function Home() {
             }
             loading={
               sessionDataLoading
+            }
+            requestedQueryId={
+              queryHistoryRequest.queryId
+            }
+            requestKey={
+              queryHistoryRequest.key
             }
           />
 

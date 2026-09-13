@@ -1072,3 +1072,120 @@ button.secondary-button {
     content: none;
   }
 }
+
+/* =========================================================
+   PASSWORD STRENGTH
+   ========================================================= */
+
+.password-strength {
+  margin-top: 4px;
+  padding: 12px 13px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: rgba(10, 9, 7, 0.38);
+}
+
+.password-strength__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+  color: var(--muted);
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 0.68rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.password-strength__header strong {
+  font-size: 0.7rem;
+}
+
+.password-strength--weak .password-strength__header strong {
+  color: var(--danger);
+}
+
+.password-strength--medium .password-strength__header strong {
+  color: var(--amber);
+}
+
+.password-strength--strong .password-strength__header strong {
+  color: var(--teal);
+}
+
+.password-requirements {
+  display: grid;
+  gap: 6px;
+  list-style: none;
+}
+
+.password-requirements li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #777166;
+  font-size: 0.74rem;
+  line-height: 1.35;
+}
+
+.password-requirements li span {
+  width: 14px;
+  color: #625d53;
+  font-family: var(--font-geist-mono), monospace;
+  font-weight: 700;
+  text-align: center;
+}
+
+.password-requirements li.is-valid {
+  color: var(--paper);
+}
+
+.password-requirements li.is-valid span {
+  color: var(--teal);
+}
+
+/* =========================================================
+   PASSWORD SHOW / HIDE
+   ========================================================= */
+
+.password-input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.password-input-wrapper .password-input {
+  padding-right: 64px;
+}
+
+.password-toggle {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+
+  border: 0;
+  background: transparent;
+  padding: 4px 6px;
+
+  color: var(--muted);
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+
+  cursor: pointer;
+}
+
+.password-toggle:hover {
+  color: var(--paper);
+}
+
+.password-toggle:focus-visible {
+  outline: 1px solid var(--teal);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
