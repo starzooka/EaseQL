@@ -1,9 +1,8 @@
 import asyncio
+import re
+from pathlib import Path
 from unittest.mock import patch
 
-<<<<<<< HEAD
-from app.services import sql_service
-=======
 import duckdb
 import pytest
 
@@ -42,24 +41,21 @@ GENERATED_SQL = {
         "SELECT * FROM employment WHERE Industry LIKE '%Manufacturing%';"
     ),
 }
->>>>>>> d73bd6bab1cb33525daa998f2d61a36f6880df6b
 
 
 class FakeResponse:
+    def __init__(self, sql: str = "Here you go:\n```sql\nSELECT COUNT(*) FROM uploaded_data;\n```"):
+        self.sql = sql
+
     def raise_for_status(self):
         return None
 
     def json(self):
-        return {"choices": [{"message": {"content": "Here you go:\n```sql\nSELECT COUNT(*) FROM uploaded_data;\n```"}}]}
+        return {"choices": [{"message": {"content": self.sql}}]}
 
 
-<<<<<<< HEAD
 class FakeClient:
     def __init__(self, timeout):
-=======
-class FakeAsyncClient:
-    def __init__(self, timeout: int):
->>>>>>> d73bd6bab1cb33525daa998f2d61a36f6880df6b
         assert timeout == 180
 
     async def __aenter__(self):
@@ -72,11 +68,12 @@ class FakeAsyncClient:
         assert url == sql_service.OLLAMA_CHAT_URL
         assert json["messages"][0]["role"] == "system"
         assert "TABLE" in json["messages"][1]["content"]
-        assert "largest amount" in json["messages"][1]["content"]
-        return FakeResponse()
+        question = json["messages"][1]["content"].split("QUESTION:\n", 1)[1]
+        if question == "Show the largest amount.":
+            return FakeResponse()
+        return FakeResponse(GENERATED_SQL[question])
 
 
-<<<<<<< HEAD
 def test_generate_sql_cleans_mocked_ollama_response():
     with patch("app.services.sql_service.httpx.AsyncClient", FakeClient):
         result = asyncio.run(
@@ -87,7 +84,6 @@ def test_generate_sql_cleans_mocked_ollama_response():
         )
 
     assert result == "SELECT COUNT(*) FROM uploaded_data;"
-=======
 @pytest.fixture(autouse=True)
 def employment_database_and_llm(tmp_path: Path):
     database_path = tmp_path / "employment.duckdb"
@@ -104,7 +100,7 @@ def employment_database_and_llm(tmp_path: Path):
             """
         )
 
-    with patch("app.services.sql_service.httpx.AsyncClient", FakeAsyncClient):
+    with patch("app.services.sql_service.httpx.AsyncClient", FakeClient):
         yield
     sql_service.DATABASE_PATH = original_database_path
 
@@ -120,4 +116,3 @@ def test_sql_generation(natural_language_query, expected_substrings):
     for expected_substring in expected_substrings:
         normalized_expected = re.sub(r"\s+", "", expected_substring).casefold()
         assert normalized_expected in generated_sql, f"Expected {expected_substring!r} in generated SQL {result!r}"
->>>>>>> d73bd6bab1cb33525daa998f2d61a36f6880df6b

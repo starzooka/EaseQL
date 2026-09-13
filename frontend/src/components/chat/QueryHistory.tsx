@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import type { SavedQueryResult } from "@/lib/api/savedQueryResults";
 import SavedQueryCard from "./SavedQueryCard";
@@ -9,23 +9,76 @@ import SavedResultViewer from "./SavedResultViewer";
 interface QueryHistoryProps {
   queries: SavedQueryResult[];
   loading: boolean;
+  requestedQueryId: number | null;
+  requestKey: number;
 }
 
 export default function QueryHistory({
   queries,
   loading,
+  requestedQueryId,
+  requestKey,
 }: QueryHistoryProps) {
   const [selectedQueryId, setSelectedQueryId] =
     useState<number | null>(null);
   const [expanded, setExpanded] = useState(false);
+  const [highlightedQueryId, setHighlightedQueryId] =
+    useState<number | null>(null);
+  const sectionRef = useRef<HTMLElement>(null);
 
   const openQuery = (queryId: number) => {
+    if (!queries.some((query) => query.id === queryId)) {
+      return;
+    }
+
     setSelectedQueryId(queryId);
     setExpanded(true);
+    setHighlightedQueryId(queryId);
+
+    window.setTimeout(() => {
+      setHighlightedQueryId((current) =>
+        current === queryId ? null : current
+      );
+    }, 2200);
   };
 
+  useEffect(() => {
+    if (
+      requestedQueryId === null ||
+      !queries.some((query) => query.id === requestedQueryId)
+    ) {
+      return;
+    }
+
+    const frameId = window.requestAnimationFrame(() => {
+      setSelectedQueryId(requestedQueryId);
+      setExpanded(true);
+      setHighlightedQueryId(requestedQueryId);
+      sectionRef.current?.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+      window.requestAnimationFrame(() => {
+        document
+          .getElementById(`query-history-${requestedQueryId}`)
+          ?.scrollIntoView({ behavior: "smooth", block: "center" });
+      });
+
+      window.setTimeout(() => {
+        setHighlightedQueryId((current) =>
+          current === requestedQueryId ? null : current
+        );
+      }, 2200);
+    });
+
+    return () => window.cancelAnimationFrame(frameId);
+  }, [requestKey, requestedQueryId, queries]);
+
   return (
-    <section className="overflow-hidden border border-[var(--line)] bg-[var(--ink)]">
+    <section
+      ref={sectionRef}
+      className="overflow-hidden border border-[var(--line)] bg-[var(--ink)]"
+    >
       <button
         type="button"
         onClick={() =>
@@ -89,7 +142,10 @@ export default function QueryHistory({
                 <SavedQueryCard
                   key={query.id}
                   query={query}
-                  selected={selectedQueryId === query.id}
+                  selected={
+                    selectedQueryId === query.id ||
+                    highlightedQueryId === query.id
+                  }
                   onOpen={openQuery}
                 />
               ))}

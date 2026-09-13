@@ -1,11 +1,3 @@
-<<<<<<< HEAD
-from pathlib import Path
-from unittest.mock import patch
-
-
-class FakeOllamaResponse:
-    def __init__(self, table_name: str):
-=======
 import re
 from pathlib import Path
 from unittest.mock import patch
@@ -43,7 +35,7 @@ class FakeSession:
     async def execute(self, statement):
         self.execute_count += 1
         if self.execute_count == 1:
-            return FakeResult(self.dataset)
+            return FakeResult(self.dataset, [self.dataset])
         return FakeResult(rows=[])
 
     def add(self, entity):
@@ -55,6 +47,10 @@ class FakeSession:
     async def commit(self):
         pass
 
+    async def flush(self):
+        if self.history is not None:
+            self.history.id = 1
+
     async def refresh(self, entity):
         if isinstance(entity, Dataset):
             entity.id = 1
@@ -62,7 +58,6 @@ class FakeSession:
 
 class FakeOllamaResponse:
     def __init__(self, table_name):
->>>>>>> d73bd6bab1cb33525daa998f2d61a36f6880df6b
         self.table_name = table_name
 
     def raise_for_status(self):
@@ -72,26 +67,37 @@ class FakeOllamaResponse:
         return {"choices": [{"message": {"content": f'SELECT * FROM "{self.table_name}" LIMIT 5'}}]}
 
 
-<<<<<<< HEAD
 class FakeAsyncClient:
     def __init__(self, timeout: int, table_name: str):
         assert timeout == 180
         self.table_name = table_name
-=======
-class FakeOllamaClient:
-    def __init__(self, timeout):
-        assert timeout == 180
->>>>>>> d73bd6bab1cb33525daa998f2d61a36f6880df6b
 
     async def __aenter__(self):
         return self
 
     async def __aexit__(self, exc_type, exc_value, traceback):
-<<<<<<< HEAD
         return None
 
     async def post(self, url, json):
         return FakeOllamaResponse(self.table_name)
+
+
+class FakeOllamaClient:
+    def __init__(self, timeout):
+        assert timeout == 180
+
+    async def __aenter__(self):
+        return self
+
+    async def __aexit__(self, exc_type, exc_value, traceback):
+        return None
+
+    async def post(self, url, json):
+        assert url == sql_service.OLLAMA_CHAT_URL
+        user_prompt = json["messages"][1]["content"]
+        table_name = re.search(r'TABLE: "([^"]+)"', user_prompt).group(1)
+        assert "show the first five sales rows" in user_prompt
+        return FakeOllamaResponse(table_name)
 
 
 def test_upload_query_end_to_end(authenticated_client):
@@ -122,15 +128,6 @@ def test_upload_query_end_to_end(authenticated_client):
     assert result["sql"] == f'SELECT * FROM "{upload["table"]}" LIMIT 5'
     assert len(result["results"]) == 5
     assert result["results"][0]["region"] == "North"
-=======
-        pass
-
-    async def post(self, url, json):
-        assert url == sql_service.OLLAMA_CHAT_URL
-        user_prompt = json["messages"][1]["content"]
-        table_name = re.search(r'TABLE: "([^"]+)"', user_prompt).group(1)
-        assert "show the first five sales rows" in user_prompt
-        return FakeOllamaResponse(table_name)
 
 
 def test_authenticated_upload_query_flow(tmp_path, monkeypatch):
@@ -168,6 +165,7 @@ def test_authenticated_upload_query_flow(tmp_path, monkeypatch):
         assert upload["dataset_id"] == 1
         assert re.fullmatch(r"user_7_[0-9a-f]{32}", upload["table"])
         assert upload["row_count"] == 8
+        assert {column["name"] for column in session.dataset.columns} == {"region", "sale_date", "sales"}
 
         with patch("app.services.sql_service.httpx.AsyncClient", FakeOllamaClient):
             query_response = client.post(
@@ -186,4 +184,3 @@ def test_authenticated_upload_query_flow(tmp_path, monkeypatch):
         assert result["results"][0]["region"] == "North"
     finally:
         app.dependency_overrides.clear()
->>>>>>> d73bd6bab1cb33525daa998f2d61a36f6880df6b

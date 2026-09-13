@@ -27,7 +27,7 @@ def authenticated_client(client):
     email = f"test-{uuid4().hex}@example.com"
     response = client.post(
         "/api/auth/register",
-        json={"email": email, "password": "test-password-123"},
+        json={"email": email, "password": "Test-pass1!"},
     )
     assert response.status_code == 201, response.text
     return client

@@ -3,7 +3,6 @@ from pathlib import Path
 from app.services.sql_service import clean_sql_response
 
 
-<<<<<<< HEAD
 def test_clean_sql_response_handles_common_llm_wrappers():
     assert clean_sql_response("Here is the query:\n```sql\nSELECT * FROM uploaded_data;\n```") == "SELECT * FROM uploaded_data;"
     assert clean_sql_response("SQL: SELECT COUNT(*) FROM uploaded_data;") == "SELECT COUNT(*) FROM uploaded_data;"
@@ -16,7 +15,6 @@ def test_text_to_sql_prompt_contains_schema_guidance():
     assert "CRITICAL SQL SYNTAX RULE" in content
     assert "Subscription Date" in content
     assert '"Subscription Date"' in content
-=======
 def test_clean_sql_response():
 	assert clean_sql_response("Here is the query:\n```sql\nSELECT * FROM uploaded_data;\n```") == "SELECT * FROM uploaded_data;"
 	assert clean_sql_response("SQL: SELECT COUNT(*) FROM uploaded_data;") == "SELECT COUNT(*) FROM uploaded_data;"
@@ -26,6 +24,7 @@ def test_text_to_sql_prompt_contains_schema_rules():
 	prompt_text = Path(__file__).resolve().parents[2] / "local-llm" / "prompts" / "text-to-sql.txt"
 	content = prompt_text.read_text(encoding="utf-8")
 	assert "CRITICAL SQL SYNTAX RULE" in content
+	assert "multiple relevant datasets" in content
+	assert "INNER JOIN or LEFT JOIN" in content
 	assert "Subscription Date" in content
 	assert '"Subscription Date"' in content
->>>>>>> d73bd6bab1cb33525daa998f2d61a36f6880df6b

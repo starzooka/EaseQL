@@ -6,6 +6,7 @@ import duckdb
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from pydantic import BaseModel, Field
 from sqlalchemy import func, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..auth import get_current_user
@@ -91,9 +92,24 @@ def _build_conversation_context(messages: list[ChatMessage], query: ChatHistory 
 
 
 @router.post("/execute-sql")
-def execute_sql(request: QueryRequest, _: User = Depends(get_current_user)) -> dict:
+async def execute_sql(
+    request: QueryRequest,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> dict:
     try:
-        return sql_service.execute_read_only_query(request.sql)
+        datasets = list(
+            (
+                await db.execute(
+                    select(Dataset)
+                    .where(Dataset.user_id == current_user.id)
+                    .order_by(Dataset.id.asc())
+                )
+            )
+            .scalars()
+            .all()
+        )
+        return sql_service.execute_read_only_query(request.sql, datasets=datasets)
     except (duckdb.Error, ValueError) as error:
         raise HTTPException(status_code=400, detail=f"Query could not be executed: {error}") from error
 
@@ -114,9 +130,14 @@ async def upload_csv(
         user_id=current_user.id,
         table_name=upload["table"],
         original_filename=upload["filename"],
+        columns=upload["columns"],
     )
     db.add(dataset)
-    await db.commit()
+    try:
+        await db.commit()
+    except IntegrityError as error:
+        await db.rollback()
+        raise HTTPException(status_code=400, detail="Dataset could not be registered") from error
     await db.refresh(dataset)
     return {"dataset_id": dataset.id, "table": upload["table"], "row_count": upload["row_count"]}
 
@@ -127,9 +148,18 @@ async def api_query(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> dict:
-    dataset = (
-        await db.execute(select(Dataset).where(Dataset.id == request.dataset_id, Dataset.user_id == current_user.id))
-    ).scalar_one_or_none()
+    datasets = list(
+        (
+            await db.execute(
+                select(Dataset)
+                .where(Dataset.user_id == current_user.id)
+                .order_by(Dataset.id.asc())
+            )
+        )
+        .scalars()
+        .all()
+    )
+    dataset = next((item for item in datasets if item.id == request.dataset_id), None)
     if dataset is None or dataset.table_name != request.table_name:
         raise HTTPException(status_code=404, detail="Dataset not found")
 
@@ -192,7 +222,7 @@ async def api_query(
         conversation_context = _build_conversation_context(recent_messages, recent_query)
 
     try:
-        schema_context = sql_service.get_schema_context(dataset.table_name)
+        schema_context = sql_service.get_schema_context_for_datasets(datasets)
     except Exception as error:
         raise HTTPException(status_code=400, detail=f"Could not prepare query context: {error}") from error
 
@@ -204,26 +234,20 @@ async def api_query(
         if attempt > 1 and last_error:
             prompt = f"{base_prompt}\n\nThe previous query failed with error: {last_error}. Please provide a corrected SQL query."
         try:
-            generation_question = request.natural_language_query if attempt == 1 else prompt
-            generation_context = {}
-            if memory_context:
-                generation_context["memory_context"] = memory_context
-            if conversation_context:
-                generation_context["conversation_context"] = conversation_context
-            if generation_context:
-                generated_sql = await sql_service.generate_sql(
-                    schema_context,
-                    generation_question,
-                    **generation_context,
-                )
-            else:
-                generated_sql = await sql_service.generate_sql(schema_context, generation_question)
             requested_row_limit = sql_service.extract_requested_row_limit(request.natural_language_query)
-            if requested_row_limit is not None:
-                generated_sql = sql_service.limit_sql(generated_sql, requested_row_limit)
+            generated_sql = await sql_service.generate_validated_sql(
+                schema_context,
+                request.natural_language_query if attempt == 1 else prompt,
+                datasets=datasets,
+                row_limit=requested_row_limit,
+                memory_context=memory_context,
+                conversation_context=conversation_context,
+            )
             execution_started = time.perf_counter()
-            execution_result = sql_service.execute_read_only_query(generated_sql)
+            execution_result = sql_service.execute_read_only_query(generated_sql, datasets=datasets)
             execution_time_ms = round((time.perf_counter() - execution_started) * 1000)
+        except sql_service.SQLValidationError as error:
+            raise HTTPException(status_code=400, detail=str(error)) from error
         except HTTPException:
             if attempt == 3:
                 raise
@@ -247,6 +271,7 @@ async def api_query(
             execution_time_ms=execution_time_ms,
         )
         db.add(history)
+        await db.flush()
         if session is not None:
             db.add_all(
                 [
@@ -260,7 +285,10 @@ async def api_query(
                         session_id=session.id,
                         user_id=current_user.id,
                         role=ChatMessageRole.ASSISTANT,
-                        content=f"Query completed successfully. {execution_result['row_count']} rows returned.",
+                        content=(
+                            f"Query completed successfully. {execution_result['row_count']} rows returned.\n\n"
+                            f"[[QUERY_HISTORY_ID:{history.id}]]"
+                        ),
                     ),
                 ]
             )

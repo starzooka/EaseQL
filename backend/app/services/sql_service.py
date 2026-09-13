@@ -3,10 +3,14 @@ import os
 import re
 import threading
 from pathlib import Path
+from typing import TYPE_CHECKING, Sequence
 
 import duckdb
 import httpx
 from fastapi import HTTPException
+
+if TYPE_CHECKING:
+    from ..models import Dataset
 
 DATABASE_PATH = Path(os.getenv("DUCKDB_PATH", Path(__file__).resolve().parents[2] / "data" / "query.duckdb"))
 OLLAMA_CHAT_URL = os.getenv("OLLAMA_CHAT_URL", "http://localhost:11434/v1/chat/completions")
@@ -15,16 +19,28 @@ TEXT_TO_SQL_PROMPT_PATH = Path(__file__).resolve().parents[3] / "local-llm" / "p
 QUERY_TIMEOUT = os.getenv("DUCKDB_QUERY_TIMEOUT", "5s")
 MAX_QUERY_ROWS = 500
 EXPLICIT_ROW_COUNT_PATTERN = re.compile(r"\b(?:first\s+)?(\d+)\s+rows?\b", re.IGNORECASE)
+TABLE_FUNCTION_PATTERN = re.compile(r"\b(?:FROM|JOIN)\s+(?:\"[^\"]+\"|[A-Za-z_][\w$]*)\s*\(", re.IGNORECASE)
 FORBIDDEN_SQL_KEYWORDS = {
     "ATTACH", "DETACH", "COPY", "CREATE", "DROP", "ALTER", "DELETE", "UPDATE",
     "INSERT", "MERGE", "PRAGMA", "INSTALL", "LOAD", "CALL", "SET",
 }
 SQL_SYSTEM_PROMPT = """You generate safe, valid SQL for DuckDB.
-Use only the tables and columns in the supplied schema. Never invent schema elements.
+Use only the tables and columns in the supplied schema. Never invent schema elements or physical table names.
+The schema may contain multiple datasets. Use only the datasets relevant to the question.
+When the question requires combining relevant datasets, use SQL JOINs with join conditions supported by the supplied columns.
 Return exactly one SQL statement and nothing else. Do not include explanations, comments,
 labels, JSON, or markdown fences. Do not execute destructive statements such as DROP,
 DELETE, UPDATE, INSERT, or ALTER. Prefer a LIMIT 100 for unbounded result lists.
 """
+SQL_CORRECTION_SYSTEM_PROMPT = f"""{SQL_SYSTEM_PROMPT}
+The previous SQL failed deterministic validation. Correct it using only the supplied schema and
+return exactly one corrected SQL statement in the same plain SQL output format. Do not explain
+the correction and do not include markdown fences.
+"""
+
+
+class SQLValidationError(ValueError):
+    """Raised when generated SQL is outside the authenticated dataset scope."""
 
 
 def quoted_identifier(identifier: str) -> str:
@@ -90,8 +106,67 @@ def limit_sql(statement: str, row_limit: int | None = None) -> str:
     return f"SELECT * FROM ({validated_statement}) AS requested_query LIMIT {row_limit}"
 
 
-def execute_read_only_query(sql: str) -> dict:
-    statement = _validate_sql(sql)
+def _plan_table_names(plan: object) -> tuple[set[str], bool]:
+    table_names: set[str] = set()
+    has_table_function = False
+
+    if isinstance(plan, dict):
+        extra_info = plan.get("extra_info")
+        if isinstance(extra_info, dict):
+            table_name = extra_info.get("Table")
+            if isinstance(table_name, str):
+                table_names.add(table_name.rsplit(".", 1)[-1].strip('"'))
+            if extra_info.get("Function"):
+                has_table_function = True
+        for value in plan.values():
+            nested_tables, nested_function = _plan_table_names(value)
+            table_names.update(nested_tables)
+            has_table_function = has_table_function or nested_function
+    elif isinstance(plan, list):
+        for value in plan:
+            nested_tables, nested_function = _plan_table_names(value)
+            table_names.update(nested_tables)
+            has_table_function = has_table_function or nested_function
+
+    return table_names, has_table_function
+
+
+def validate_sql_for_datasets(sql: str, datasets: Sequence["Dataset"]) -> str:
+    if not datasets:
+        raise SQLValidationError("No datasets are available for this query.")
+
+    try:
+        statement = _validate_sql(sql)
+    except ValueError as error:
+        raise SQLValidationError("The generated SQL is not valid.") from error
+
+    if TABLE_FUNCTION_PATTERN.search(statement):
+        raise SQLValidationError("The query references an unsupported table source.")
+
+    allowed_tables = {dataset.table_name for dataset in datasets}
+    try:
+        with duckdb.connect(str(DATABASE_PATH), read_only=True) as connection:
+            explained = connection.execute(f"EXPLAIN (FORMAT JSON) {statement}").fetchone()
+    except duckdb.Error as error:
+        raise SQLValidationError("The query references an unavailable table or column, or has invalid SQL.") from error
+
+    if explained is None or len(explained) < 2:
+        raise SQLValidationError("The generated SQL could not be validated.")
+
+    try:
+        plan = json.loads(explained[1])
+    except (TypeError, json.JSONDecodeError) as error:
+        raise SQLValidationError("The generated SQL could not be validated.") from error
+
+    referenced_tables, has_table_function = _plan_table_names(plan)
+    if has_table_function or not referenced_tables.issubset(allowed_tables):
+        raise SQLValidationError("The query references a dataset outside the current user scope.")
+
+    return statement
+
+
+def execute_read_only_query(sql: str, datasets: Sequence["Dataset"]) -> dict:
+    statement = validate_sql_for_datasets(sql, datasets)
     connection = duckdb.connect(str(DATABASE_PATH), read_only=True)
     timeout_match = re.fullmatch(r"(\d+(?:\.\d+)?)(ms|s|m)", QUERY_TIMEOUT.strip().lower())
     if not timeout_match:
@@ -129,11 +204,31 @@ async def generate_sql(
         user_prompt = f"{user_prompt}\n\n{memory_context}"
     if conversation_context:
         user_prompt = f"{user_prompt}\n\n{conversation_context}"
+    return await _request_sql(SQL_SYSTEM_PROMPT, user_prompt)
+
+
+async def correct_sql(
+    schema_text: str,
+    question: str,
+    invalid_sql: str,
+    validation_error: str,
+) -> str:
+    user_prompt = (
+        f"SCHEMA:\n{schema_text}\n\n"
+        f"ORIGINAL QUESTION:\n{question}\n\n"
+        f"INVALID GENERATED SQL:\n{invalid_sql}\n\n"
+        f"VALIDATION ERROR:\n{validation_error}\n\n"
+        "Return the corrected SQL statement only."
+    )
+    return await _request_sql(SQL_CORRECTION_SYSTEM_PROMPT, user_prompt)
+
+
+async def _request_sql(system_prompt: str, user_prompt: str) -> str:
     payload = {
         "model": OLLAMA_MODEL,
         "temperature": 0,
         "messages": [
-            {"role": "system", "content": SQL_SYSTEM_PROMPT},
+            {"role": "system", "content": system_prompt},
             {"role": "user", "content": user_prompt},
         ],
     }
@@ -154,25 +249,51 @@ async def generate_sql(
     #     raise HTTPException(status_code=502, detail=f"Could not generate SQL from Ollama: {error}") from error
 
 
-def get_schema_context(table_name: str) -> str:
-    if not table_name or not table_name.strip():
-        raise ValueError("table_name must not be empty")
+async def generate_validated_sql(
+    schema_text: str,
+    question: str,
+    datasets: Sequence["Dataset"],
+    row_limit: int | None = None,
+    memory_context: str | None = None,
+    conversation_context: str | None = None,
+) -> str:
+    generated_sql = await generate_sql(
+        schema_text,
+        question,
+        memory_context=memory_context,
+        conversation_context=conversation_context,
+    )
+    try:
+        candidate_sql = limit_sql(generated_sql, row_limit)
+        return validate_sql_for_datasets(candidate_sql, datasets)
+    except (SQLValidationError, ValueError) as error:
+        corrected_sql = await correct_sql(
+            schema_text,
+            question,
+            generated_sql,
+            str(error),
+        )
+        try:
+            corrected_candidate = limit_sql(corrected_sql, row_limit)
+            return validate_sql_for_datasets(corrected_candidate, datasets)
+        except (SQLValidationError, ValueError) as corrected_error:
+            raise SQLValidationError("The generated SQL could not be corrected safely.") from corrected_error
 
-    quoted_table = quoted_identifier(table_name.strip())
-    with duckdb.connect(str(DATABASE_PATH), read_only=True) as connection:
-        columns = connection.sql(f"DESCRIBE {quoted_table}").fetchall()
-        sample_result = connection.sql(f"SELECT * FROM {quoted_table} LIMIT 3")
-        sample_columns = [column[0] for column in sample_result.description]
-        sample_rows = [
-            json.dumps(dict(zip(sample_columns, row)), default=str, separators=(",", ":"))
-            for row in sample_result.fetchall()
-        ]
 
+def _format_schema_context(
+    table_name: str,
+    columns: list[dict[str, str]],
+    sample_rows: list[str],
+    original_filename: str | None = None,
+) -> str:
+    quoted_table = quoted_identifier(table_name)
     column_lines = "\n".join(
-        f"- {quoted_identifier(name)}: {data_type}" for name, data_type, *_ in columns
+        f"- {quoted_identifier(column['name'])}: {column['type']}" for column in columns
     ) or "- (no columns)"
     sample_text = "\n".join(f"- {row}" for row in sample_rows) or "- (no rows)"
+    dataset_line = f"DATASET: {original_filename}\n" if original_filename else ""
     return (
+        f"{dataset_line}"
         f"TABLE: {quoted_table}\n"
         f"COLUMNS:\n{column_lines}\n"
         f"SAMPLE ROWS (up to 3):\n{sample_text}\n"
@@ -182,3 +303,56 @@ def get_schema_context(table_name: str) -> str:
         "you MUST filter using the Series_title_1 or Series_title_2 columns to isolate that metric.\n"
         "- Suppressed: Contains nulls or specific flags."
     )
+
+
+def _get_sample_rows(table_name: str) -> list[str]:
+    quoted_table = quoted_identifier(table_name)
+    with duckdb.connect(str(DATABASE_PATH), read_only=True) as connection:
+        sample_result = connection.sql(f"SELECT * FROM {quoted_table} LIMIT 3")
+        sample_columns = [column[0] for column in sample_result.description]
+        return [
+            json.dumps(dict(zip(sample_columns, row)), default=str, separators=(",", ":"))
+            for row in sample_result.fetchall()
+        ]
+
+
+def get_schema_context(table_name: str) -> str:
+    if not table_name or not table_name.strip():
+        raise ValueError("table_name must not be empty")
+
+    quoted_table = quoted_identifier(table_name.strip())
+    with duckdb.connect(str(DATABASE_PATH), read_only=True) as connection:
+        columns = connection.sql(f"DESCRIBE {quoted_table}").fetchall()
+    return _format_schema_context(
+        table_name.strip(),
+        [{"name": row[0], "type": row[1]} for row in columns],
+        _get_sample_rows(table_name.strip()),
+    )
+
+
+def get_schema_context_for_datasets(datasets: Sequence["Dataset"]) -> str:
+    if not datasets:
+        raise ValueError("at least one dataset is required")
+
+    contexts = []
+    for dataset in datasets:
+        table_name = dataset.table_name.strip()
+        if not table_name:
+            raise ValueError("dataset table_name must not be empty")
+
+        columns = dataset.columns or []
+        if not columns:
+            with duckdb.connect(str(DATABASE_PATH), read_only=True) as connection:
+                description = connection.sql(f"DESCRIBE {quoted_identifier(table_name)}").fetchall()
+            columns = [{"name": row[0], "type": row[1]} for row in description]
+
+        contexts.append(
+            _format_schema_context(
+                table_name,
+                columns,
+                _get_sample_rows(table_name),
+                dataset.original_filename,
+            )
+        )
+
+    return "\n\n".join(contexts)

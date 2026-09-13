@@ -35,7 +35,7 @@ export default function SavedQueryCard({
       : "text-[var(--amber)]";
 
   return (
-    <li>
+    <li id={`query-history-${query.id}`}>
       <button
         type="button"
         onClick={() => onOpen(query.id)}
